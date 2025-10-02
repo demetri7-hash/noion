@@ -475,24 +475,13 @@ export class ToastIntegrationService {
         console.log(`Fetching chunk ${chunkCount}: ${currentStart.toISOString()} to ${currentEnd.toISOString()}`);
 
         try {
-          // Paginate through all pages for this date range using pageToken
-          let pageToken: string | undefined = undefined;
+          // Paginate through all pages for this date range using page numbers
+          // Note: /ordersBulk uses 'page' parameter, not 'pageToken'
           let hasMorePages = true;
           let chunkTotal = 0;
-          let pageNum = 1;
+          let page = 1;
 
           while (hasMorePages) {
-            const params: any = {
-              startDate: currentStart.toISOString(),
-              endDate: currentEnd.toISOString(),
-              pageSize: 100
-            };
-
-            // Add pageToken if we have one (for subsequent pages)
-            if (pageToken) {
-              params.pageToken = pageToken;
-            }
-
             const response = await this.client.get(
               `/orders/v2/ordersBulk`,
               {
@@ -500,7 +489,12 @@ export class ToastIntegrationService {
                   'Authorization': `Bearer ${accessToken}`,
                   'Toast-Restaurant-External-ID': restaurant.posConfig.locationId || restaurant.posConfig.managementGroupId
                 },
-                params
+                params: {
+                  startDate: currentStart.toISOString(),
+                  endDate: currentEnd.toISOString(),
+                  pageSize: 100,
+                  page: page
+                }
               }
             );
 
@@ -508,13 +502,12 @@ export class ToastIntegrationService {
             allTransactions.push(...pageData);
             chunkTotal += pageData.length;
 
-            console.log(`  ✓ Chunk ${chunkCount}, Page ${pageNum}: Retrieved ${pageData.length} orders (total: ${chunkTotal})`);
+            console.log(`  ✓ Chunk ${chunkCount}, Page ${page}: Retrieved ${pageData.length} orders (total: ${chunkTotal})`);
 
-            // Check if there's a next page token
-            const nextPageToken = response.headers['toast-next-page-token'];
-            if (nextPageToken) {
-              pageToken = nextPageToken;
-              pageNum++;
+            // If we got a full page (100 orders), there might be more
+            // Continue until we get less than pageSize
+            if (pageData.length === 100) {
+              page++;
               // Small delay between pages (rate limit: 5 req/second)
               await new Promise(resolve => setTimeout(resolve, 200));
             } else {
@@ -577,21 +570,38 @@ export class ToastIntegrationService {
       }));
 
       // Calculate payments
-      const payments = check.payments.map(payment => ({
-        method: this.mapToastPaymentMethod(payment.paymentType),
-        amount: payment.amount,
-        cardType: payment.lastFour ? 'other' as const : undefined,
-        last4Digits: payment.lastFour,
-        tip: payment.tipAmount > 0 ? {
-          amount: payment.tipAmount,
-          // Calculate tip percentage based on pre-tip amount, cap at 100%
-          percentage: Math.min(
-            (payment.tipAmount / (payment.amount - payment.tipAmount)) * 100,
-            100
-          ),
-          method: 'card' as const
-        } : undefined
-      }));
+      const payments = check.payments.map(payment => {
+        let tipPercentage = 0;
+
+        // Calculate tip percentage safely
+        if (payment.tipAmount > 0) {
+          const preTipAmount = payment.amount - payment.tipAmount;
+
+          // Only calculate percentage if pre-tip amount is positive
+          if (preTipAmount > 0) {
+            tipPercentage = Math.min(
+              (payment.tipAmount / preTipAmount) * 100,
+              100
+            );
+          }
+          // If pre-tip amount is 0 or negative (refunds/voids), set to 0
+          else {
+            tipPercentage = 0;
+          }
+        }
+
+        return {
+          method: this.mapToastPaymentMethod(payment.paymentType),
+          amount: payment.amount,
+          cardType: payment.lastFour ? 'other' as const : undefined,
+          last4Digits: payment.lastFour,
+          tip: payment.tipAmount > 0 ? {
+            amount: payment.tipAmount,
+            percentage: tipPercentage,
+            method: 'card' as const
+          } : undefined
+        };
+      });
 
       // Map order type
       const orderType = this.mapToastOrderType(toastTransaction.diningOption?.behavior);
