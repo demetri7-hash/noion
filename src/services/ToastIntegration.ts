@@ -475,25 +475,43 @@ export class ToastIntegrationService {
         console.log(`Fetching chunk ${chunkCount}: ${currentStart.toISOString()} to ${currentEnd.toISOString()}`);
 
         try {
-          // Use /ordersBulk endpoint for batch retrieval
-          const response = await this.client.get(
-            `/orders/v2/ordersBulk`,
-            {
-              headers: {
-                'Authorization': `Bearer ${accessToken}`,
-                'Toast-Restaurant-External-ID': restaurant.posConfig.locationId || restaurant.posConfig.managementGroupId
-              },
-              params: {
-                startDate: currentStart.toISOString(),
-                endDate: currentEnd.toISOString(),
-                pageSize: 100
-              }
-            }
-          );
+          // Paginate through all pages for this date range
+          let page = 1;
+          let hasMorePages = true;
+          let chunkTotal = 0;
 
-          const chunkData = response.data || [];
-          allTransactions.push(...chunkData);
-          console.log(`  ✓ Chunk ${chunkCount}: Retrieved ${chunkData.length} orders`);
+          while (hasMorePages) {
+            const response = await this.client.get(
+              `/orders/v2/ordersBulk`,
+              {
+                headers: {
+                  'Authorization': `Bearer ${accessToken}`,
+                  'Toast-Restaurant-External-ID': restaurant.posConfig.locationId || restaurant.posConfig.managementGroupId
+                },
+                params: {
+                  startDate: currentStart.toISOString(),
+                  endDate: currentEnd.toISOString(),
+                  pageSize: 100,
+                  page: page
+                }
+              }
+            );
+
+            const pageData = response.data || [];
+            allTransactions.push(...pageData);
+            chunkTotal += pageData.length;
+
+            console.log(`  ✓ Chunk ${chunkCount}, Page ${page}: Retrieved ${pageData.length} orders (total: ${chunkTotal})`);
+
+            // If we got less than 100 orders, we've reached the last page
+            if (pageData.length < 100) {
+              hasMorePages = false;
+            } else {
+              page++;
+              // Small delay between pages (rate limit: 5 req/second)
+              await new Promise(resolve => setTimeout(resolve, 200));
+            }
+          }
         } catch (error) {
           console.error(`  ✗ Chunk ${chunkCount} failed:`, error);
           // Continue with other chunks even if one fails
