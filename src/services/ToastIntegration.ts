@@ -557,7 +557,11 @@ export class ToastIntegrationService {
         last4Digits: payment.lastFour,
         tip: payment.tipAmount > 0 ? {
           amount: payment.tipAmount,
-          percentage: (payment.tipAmount / payment.amount) * 100,
+          // Calculate tip percentage based on pre-tip amount, cap at 100%
+          percentage: Math.min(
+            (payment.tipAmount / (payment.amount - payment.tipAmount)) * 100,
+            100
+          ),
           method: 'card' as const
         } : undefined
       }));
