@@ -434,7 +434,7 @@ export class ToastIntegrationService {
 
   /**
    * Fetch transactions from Toast API
-   * Note: Toast API only allows 1-hour time intervals, so we chunk the date range
+   * Note: Using /ordersBulk endpoint which supports up to 30-day date ranges
    */
   async fetchTransactions(
     restaurantId: string,
@@ -453,22 +453,21 @@ export class ToastIntegrationService {
         this.encryptionKey
       );
 
-      // Toast API only allows 1-hour intervals
-      // Break the date range into 1-hour chunks
+      // Use /ordersBulk endpoint which supports up to 30-day ranges
+      // Break into 30-day chunks if the date range is longer
       const allTransactions: IToastTransaction[] = [];
-      const oneHourMs = 60 * 60 * 1000; // 1 hour in milliseconds
+      const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000; // 30 days in milliseconds
 
       let currentStart = new Date(startDate.getTime());
       const finalEnd = new Date(endDate.getTime());
 
       console.log(`Fetching Toast transactions from ${startDate.toISOString()} to ${endDate.toISOString()}`);
-      console.log(`Breaking into 1-hour chunks due to Toast API limitation...`);
 
       let chunkCount = 0;
       while (currentStart < finalEnd) {
-        // Calculate end of this 1-hour chunk
+        // Calculate end of this chunk (max 30 days)
         const currentEnd = new Date(Math.min(
-          currentStart.getTime() + oneHourMs,
+          currentStart.getTime() + thirtyDaysMs,
           finalEnd.getTime()
         ));
 
@@ -476,8 +475,9 @@ export class ToastIntegrationService {
         console.log(`Fetching chunk ${chunkCount}: ${currentStart.toISOString()} to ${currentEnd.toISOString()}`);
 
         try {
+          // Use /ordersBulk endpoint for batch retrieval
           const response = await this.client.get(
-            `/orders/v2/orders`,
+            `/orders/v2/ordersBulk`,
             {
               headers: {
                 'Authorization': `Bearer ${accessToken}`,
@@ -502,8 +502,11 @@ export class ToastIntegrationService {
         // Move to next chunk
         currentStart = new Date(currentEnd.getTime());
 
-        // Add small delay to respect rate limits (1000 req/hour = ~1 req/3.6s)
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // Add delay to respect rate limits (5-10 seconds recommended between calls)
+        if (currentStart < finalEnd) {
+          console.log('  Waiting 5 seconds before next request...');
+          await new Promise(resolve => setTimeout(resolve, 5000));
+        }
       }
 
       console.log(`✅ Total transactions fetched: ${allTransactions.length} from ${chunkCount} chunks`);
@@ -664,11 +667,11 @@ export class ToastIntegrationService {
     try {
       console.log(`Starting initial sync for restaurant ${restaurantId}`);
 
-      // Fetch last 7 days of data (reduced from 30 to avoid timeout with 1-hour API chunks)
-      // Toast API only allows 1-hour intervals, so 30 days = 720 API calls which may timeout
+      // Fetch last 30 days of data using /ordersBulk endpoint
+      // /ordersBulk supports up to 30-day date ranges (only 1 API call needed)
       const endDate = new Date();
       const startDate = new Date();
-      startDate.setDate(startDate.getDate() - 7); // 7 days = 168 API calls (~17 seconds with delays)
+      startDate.setDate(startDate.getDate() - 30);
 
       const toastTransactions = await this.fetchTransactions(restaurantId, startDate, endDate);
 
