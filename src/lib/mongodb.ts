@@ -5,13 +5,13 @@
  * and error handling for Next.js environment.
  */
 
-import mongoose from 'mongoose';
+import mongoose, { Mongoose } from 'mongoose';
 
 declare global {
   // eslint-disable-next-line no-var
   var mongoose: {
-    conn: typeof mongoose | null;
-    promise: Promise<typeof mongoose> | null;
+    conn: Mongoose | null;
+    promise: Promise<Mongoose> | null;
   };
 }
 
@@ -35,9 +35,9 @@ if (!cached) {
 /**
  * Connect to MongoDB with connection pooling
  *
- * @returns Promise<typeof mongoose> - Mongoose instance
+ * @returns Promise<Mongoose> - Mongoose instance
  */
-async function connectDB(): Promise<typeof mongoose> {
+async function connectDB(): Promise<Mongoose> {
   if (cached.conn) {
     return cached.conn;
   }
@@ -73,7 +73,7 @@ async function connectDB(): Promise<typeof mongoose> {
     throw e;
   }
 
-  return cached.conn;
+  return cached.conn!;
 }
 
 /**

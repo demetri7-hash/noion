@@ -146,7 +146,7 @@ export class AuthService {
         success: true,
         message: 'Registration successful',
         user: userResponse,
-        token,
+        accessToken: token,
         refreshToken
       };
 
@@ -211,7 +211,7 @@ export class AuthService {
         success: true,
         message: 'Login successful',
         user: userResponse,
-        token,
+        accessToken: token,
         refreshToken
       };
 

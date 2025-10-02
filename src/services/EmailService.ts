@@ -81,7 +81,7 @@ export class EmailService {
 
       const html = `
         <h1>Welcome to NOION Analytics!</h1>
-        <p>Hi ${restaurant.owner.name},</p>
+        <p>Hi ${restaurant.owner.firstName},</p>
         <p>Thank you for joining NOION Analytics. We're excited to help you unlock hidden revenue opportunities in your restaurant.</p>
         <h2>Next Steps:</h2>
         <ol>
@@ -118,7 +118,7 @@ export class EmailService {
 
       const html = `
         <h1>Your Free Discovery Report is Ready!</h1>
-        <p>Hi ${restaurant.owner.name},</p>
+        <p>Hi ${restaurant.owner.firstName},</p>
         <p>We've analyzed your restaurant data and discovered some significant revenue opportunities.</p>
 
         <div style="background: #f3f4f6; padding: 20px; margin: 20px 0; border-radius: 8px;">
@@ -166,7 +166,7 @@ export class EmailService {
 
       const html = `
         <h1>Your Weekly Analytics Summary</h1>
-        <p>Hi ${restaurant.owner.name},</p>
+        <p>Hi ${restaurant.owner.firstName},</p>
         <p>Here's what happened at ${restaurant.name} this week:</p>
 
         <h2>Key Metrics:</h2>
@@ -231,7 +231,7 @@ export class EmailService {
 
       const html = `
         <h1>Payment Confirmation</h1>
-        <p>Hi ${restaurant.owner.name},</p>
+        <p>Hi ${restaurant.owner.firstName},</p>
         <p>Your payment of $${amount.toFixed(2)} has been processed successfully.</p>
         <p><a href="${invoiceUrl}">Download Invoice →</a></p>
         <p>Thank you for using NOION Analytics!</p>

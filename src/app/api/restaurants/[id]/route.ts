@@ -87,7 +87,7 @@ export async function PUT(
     if (name) restaurant.name = name;
     if (type) restaurant.type = type;
     if (address) restaurant.location.address = address;
-    if (phone) restaurant.phone = phone;
+    if (phone) restaurant.phoneNumber = phone;
 
     await restaurant.save();
 

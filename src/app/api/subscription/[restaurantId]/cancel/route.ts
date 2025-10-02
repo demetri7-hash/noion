@@ -27,10 +27,10 @@ export async function POST(
     await connectDB();
 
     const body = await req.json();
-    const { reason, feedback } = body;
+    const { immediately = false } = body;
 
     const subscriptionService = new SubscriptionService();
-    await subscriptionService.cancelSubscription(params.restaurantId, reason, feedback);
+    await subscriptionService.cancelSubscription(params.restaurantId, immediately);
 
     return NextResponse.json({
       success: true,
