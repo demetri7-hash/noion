@@ -18,7 +18,10 @@
       "Bash(RESTAURANT_GUID=\"d3efae34-7c2e-4107-a442-49081e624706\")",
       "Bash(curl -X GET \"https://ws-api.toasttab.com/orders/v2/orders?restaurantGuid=$RESTAURANT_GUID&pageSize=10\" -H \"Authorization: Bearer $TOKEN\" -H \"Toast-Restaurant-External-ID: $RESTAURANT_GUID\")",
       "WebFetch(domain:central.toasttab.com)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(git push:*)",
+      "Bash(cat:*)",
+      "Bash(git rm:*)"
     ],
     "deny": [],
     "ask": []

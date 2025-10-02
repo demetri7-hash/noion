@@ -42,7 +42,7 @@ export async function GET(
       progress: {
         ...syncJob.progress,
         // Override with real-time queue progress if available
-        ...(queueStatus?.progress || {})
+        ...(queueStatus?.progress && typeof queueStatus.progress === 'object' ? queueStatus.progress : {})
       },
       result: syncJob.result,
       error: syncJob.error,
