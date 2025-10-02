@@ -77,3 +77,4 @@ ENV/
 # backup files
 *.bak
 *.backup
+START_POINT_*.md

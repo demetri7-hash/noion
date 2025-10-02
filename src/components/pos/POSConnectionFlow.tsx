@@ -120,7 +120,9 @@ export default function POSConnectionFlow() {
 
       // Store restaurant ID for dashboard access
       if (typeof window !== 'undefined') {
-        localStorage.setItem('restaurantId', testRestaurantId);
+        // Use the restaurant ID returned from the API (the real MongoDB ObjectId)
+        const actualRestaurantId = result.data?.restaurantId || testRestaurantId;
+        localStorage.setItem('restaurantId', actualRestaurantId);
         if (result.data?.restaurantGuid) {
           localStorage.setItem('toastRestaurantGuid', result.data.restaurantGuid);
         }

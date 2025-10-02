@@ -37,28 +37,56 @@ export async function POST(
     try {
       restaurant = await Restaurant.findById(params.id);
     } catch (castError) {
-      // params.id is not a valid ObjectId, create a new restaurant
-      console.log('Invalid ObjectId, creating new test restaurant...');
+      // params.id is not a valid ObjectId, try to find existing test restaurant
+      console.log('Invalid ObjectId, looking for existing test restaurant...');
       restaurant = null;
     }
 
+    // If not found by ID, try to find existing test restaurant by email
     if (!restaurant) {
-      console.log('Restaurant not found, creating test restaurant...');
+      console.log('Restaurant not found by ID, searching by test email...');
+      restaurant = await Restaurant.findOne({ 'owner.email': 'test@example.com' });
+    }
+
+    // If still not found, create a new test restaurant
+    if (!restaurant) {
+      console.log('No existing test restaurant found, creating new one...');
       // Create a test restaurant for development with proper ObjectId
       restaurant = new Restaurant({
         name: 'Test Restaurant',
+        type: 'casual_dining',
         owner: {
-          name: 'Test Owner',
+          firstName: 'Test',
+          lastName: 'Owner',
           email: 'test@example.com',
-          phone: '555-0100'
+          phone: '555-0100',
+          password: 'temporary_password_hash'
+        },
+        location: {
+          address: '123 Test Street',
+          city: 'Test City',
+          state: 'CA',
+          zipCode: '90001',
+          country: 'US'
         },
         posConfig: {
-          type: 'none',
+          type: 'toast',
           isConnected: false
+        },
+        subscription: {
+          plan: 'Intelligence',
+          tier: 'intelligence',
+          status: 'trialing',
+          startDate: new Date(),
+          billingCycle: 'monthly',
+          amount: 299,
+          currency: 'USD'
         }
       });
       await restaurant.save();
       console.log('Test restaurant created with ID:', restaurant._id);
+    } else {
+      console.log('Using existing test restaurant with ID:', restaurant._id);
     }
 
     // NOTE: Toast does not use traditional OAuth redirects
@@ -103,7 +131,9 @@ export async function POST(
           const toastService = new ToastIntegration();
           console.log('Calling toastService.connectRestaurant...');
 
-          await toastService.connectRestaurant(params.id, credentials);
+          // Use the actual restaurant._id (MongoDB ObjectId) instead of params.id
+          const restaurantId = String(restaurant._id);
+          await toastService.connectRestaurant(restaurantId, credentials);
 
           console.log('Toast connection successful, updating restaurant...');
 
@@ -118,6 +148,7 @@ export async function POST(
             data: {
               posType: 'toast',
               connected: true,
+              restaurantId: String(restaurant._id),
               restaurantGuid: credentials.locationGuid
             },
           });

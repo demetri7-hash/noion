@@ -475,12 +475,24 @@ export class ToastIntegrationService {
         console.log(`Fetching chunk ${chunkCount}: ${currentStart.toISOString()} to ${currentEnd.toISOString()}`);
 
         try {
-          // Paginate through all pages for this date range
-          let page = 1;
+          // Paginate through all pages for this date range using pageToken
+          let pageToken: string | undefined = undefined;
           let hasMorePages = true;
           let chunkTotal = 0;
+          let pageNum = 1;
 
           while (hasMorePages) {
+            const params: any = {
+              startDate: currentStart.toISOString(),
+              endDate: currentEnd.toISOString(),
+              pageSize: 100
+            };
+
+            // Add pageToken if we have one (for subsequent pages)
+            if (pageToken) {
+              params.pageToken = pageToken;
+            }
+
             const response = await this.client.get(
               `/orders/v2/ordersBulk`,
               {
@@ -488,12 +500,7 @@ export class ToastIntegrationService {
                   'Authorization': `Bearer ${accessToken}`,
                   'Toast-Restaurant-External-ID': restaurant.posConfig.locationId || restaurant.posConfig.managementGroupId
                 },
-                params: {
-                  startDate: currentStart.toISOString(),
-                  endDate: currentEnd.toISOString(),
-                  pageSize: 100,
-                  page: page
-                }
+                params
               }
             );
 
@@ -501,15 +508,17 @@ export class ToastIntegrationService {
             allTransactions.push(...pageData);
             chunkTotal += pageData.length;
 
-            console.log(`  ✓ Chunk ${chunkCount}, Page ${page}: Retrieved ${pageData.length} orders (total: ${chunkTotal})`);
+            console.log(`  ✓ Chunk ${chunkCount}, Page ${pageNum}: Retrieved ${pageData.length} orders (total: ${chunkTotal})`);
 
-            // If we got less than 100 orders, we've reached the last page
-            if (pageData.length < 100) {
-              hasMorePages = false;
-            } else {
-              page++;
+            // Check if there's a next page token
+            const nextPageToken = response.headers['toast-next-page-token'];
+            if (nextPageToken) {
+              pageToken = nextPageToken;
+              pageNum++;
               // Small delay between pages (rate limit: 5 req/second)
               await new Promise(resolve => setTimeout(resolve, 200));
+            } else {
+              hasMorePages = false;
             }
           }
         } catch (error) {

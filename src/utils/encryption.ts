@@ -24,24 +24,24 @@ export class EncryptionUtil {
       // Generate random salt and IV
       const salt = crypto.randomBytes(16);
       const iv = crypto.randomBytes(this.ivLength);
-      
+
       // Derive key from password
       const key = this.deriveKey(password, salt);
-      
-      // Create cipher
-      const cipher = crypto.createCipher(this.algorithm, key);
-      
+
+      // Create cipher with IV
+      const cipher = crypto.createCipheriv(this.algorithm, key, iv);
+
       // Encrypt the text
       let encrypted = cipher.update(text, 'utf8', 'hex');
       encrypted += cipher.final('hex');
-      
+
       // Combine salt, iv, and encrypted data
       const combined = Buffer.concat([
         salt,
         iv,
         Buffer.from(encrypted, 'hex')
       ]);
-      
+
       return combined.toString('base64');
     } catch (error: any) {
       throw new Error(`Encryption failed: ${error.message}`);
@@ -55,22 +55,22 @@ export class EncryptionUtil {
     try {
       // Decode from base64
       const combined = Buffer.from(encryptedData, 'base64');
-      
+
       // Extract components
       const salt = combined.subarray(0, 16);
       const iv = combined.subarray(16, 16 + this.ivLength);
       const encrypted = combined.subarray(16 + this.ivLength);
-      
+
       // Derive key from password
       const key = this.deriveKey(password, salt);
-      
-      // Create decipher
-      const decipher = crypto.createDecipher(this.algorithm, key);
-      
+
+      // Create decipher with IV
+      const decipher = crypto.createDecipheriv(this.algorithm, key, iv);
+
       // Decrypt the data
       let decrypted = decipher.update(encrypted, undefined, 'utf8');
       decrypted += decipher.final('utf8');
-      
+
       return decrypted;
     } catch (error: any) {
       throw new Error(`Decryption failed: ${error.message}`);
