@@ -26,15 +26,8 @@ export async function POST(
 
     await connectDB();
 
-    const body = await req.json();
-    const { sendEmail = false } = body;
-
-    const discoveryService = new DiscoveryReport(params.restaurantId);
-    const report = await discoveryService.generateReport();
-
-    if (sendEmail) {
-      await discoveryService.sendReportEmail(report.id);
-    }
+    const discoveryService = new DiscoveryReport();
+    const report = await discoveryService.generateDiscoveryReport(params.restaurantId);
 
     return NextResponse.json({
       success: true,
