@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "build:worker": "tsc --project tsconfig.worker.json",
+    "build:worker": "tsc --project tsconfig.worker.json && tsc-alias -p tsconfig.worker.json",
     "start": "next start",
     "lint": "next lint",
     "test": "jest",
@@ -74,6 +74,7 @@
     "supertest": "^6.3.0",
     "ts-jest": "^29.1.0",
     "ts-node": "^10.9.2",
+    "tsc-alias": "^1.8.16",
     "tsconfig-paths": "^4.2.0"
   }
 }

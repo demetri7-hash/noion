@@ -11,7 +11,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.EmailService = void 0;
 const mail_1 = __importDefault(require("@sendgrid/mail"));
-const Restaurant_1 = __importDefault(require("@/models/Restaurant"));
+const Restaurant_1 = __importDefault(require("../models/Restaurant"));
 // Initialize SendGrid if API key is available
 if (process.env.SENDGRID_API_KEY) {
     mail_1.default.setApiKey(process.env.SENDGRID_API_KEY);
