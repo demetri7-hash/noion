@@ -116,9 +116,9 @@ export default function POSConnectionFlow() {
         throw new Error(result.error || result.hint || 'Connection failed');
       }
 
-      console.log('✅ Toast POS connected successfully!', result);
+      console.log('✅ Toast POS job queued successfully!', result);
 
-      // Store restaurant ID for dashboard access
+      // Store restaurant ID and sync job info
       if (typeof window !== 'undefined') {
         // Use the restaurant ID returned from the API (the real MongoDB ObjectId)
         const actualRestaurantId = result.data?.restaurantId || testRestaurantId;
@@ -126,12 +126,17 @@ export default function POSConnectionFlow() {
         if (result.data?.restaurantGuid) {
           localStorage.setItem('toastRestaurantGuid', result.data.restaurantGuid);
         }
+        // Store job info to track sync progress
+        if (result.data?.syncJob) {
+          localStorage.setItem('syncJobId', result.data.syncJob.id);
+          localStorage.setItem('syncJobStatus', result.data.syncJob.status);
+        }
       }
 
       setConnectionStatus({
-        isConnected: true,
-        lastSync: new Date(),
-        status: 'connected'
+        isConnected: false, // Not fully connected until sync completes
+        lastSync: null,
+        status: 'connected' // Using "connected" to indicate job queued
       });
       setStep('complete');
 
@@ -361,25 +366,37 @@ export default function POSConnectionFlow() {
 
   const renderComplete = () => (
     <div className="space-y-6 text-center">
-      <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-        <CheckCircle className="h-10 w-10 text-green-600" />
+      <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto">
+        <Loader className="h-10 w-10 text-blue-600 animate-spin" />
       </div>
-      
+
       <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Connection Successful!</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Sync Started!</h2>
         <p className="text-gray-600">
-          Your {selectedPOS?.name} system is now connected and syncing data
+          Your {selectedPOS?.name} data is being synced in the background
         </p>
       </div>
 
-      <div className="bg-green-50 border border-green-200 rounded-lg p-4 max-w-md mx-auto">
-        <h4 className="font-medium text-green-900 mb-2">🎉 What happens next?</h4>
-        <ul className="text-sm text-green-700 space-y-1 text-left">
-          <li>✨ Your data is syncing now!</li>
-          <li>📊 Dashboard available instantly - click below</li>
-          <li>🤖 AI is analyzing your last 30 days of sales</li>
-          <li>📧 Your free discovery report will be emailed soon</li>
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-md mx-auto">
+        <h4 className="font-medium text-blue-900 mb-2">⏱️ What's happening now?</h4>
+        <ul className="text-sm text-blue-700 space-y-2 text-left">
+          <li>✅ Connection established successfully</li>
+          <li>🔄 Your last 30 days of sales data is being synced</li>
+          <li>⚡ This usually takes 2-3 minutes for most restaurants</li>
+          <li>📧 We'll email you when your data is ready!</li>
         </ul>
+      </div>
+
+      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 max-w-md mx-auto">
+        <div className="flex items-start">
+          <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5 mr-3 flex-shrink-0" />
+          <div className="text-left">
+            <h4 className="font-medium text-amber-900 mb-1">Dashboard Not Ready Yet</h4>
+            <p className="text-sm text-amber-700">
+              Your dashboard will be populated once the sync completes. You can safely close this page and check back in a few minutes, or wait for the email notification.
+            </p>
+          </div>
+        </div>
       </div>
 
       <div className="space-x-3">
@@ -388,16 +405,15 @@ export default function POSConnectionFlow() {
             console.log('Dashboard button clicked - navigating to /dashboard');
             router.push('/dashboard');
           }}
-          className="bg-blue-600 text-white py-2 px-6 rounded-md hover:bg-blue-700 transition-colors"
+          className="bg-gray-600 text-white py-2 px-6 rounded-md hover:bg-gray-700 transition-colors"
         >
-          View Dashboard
+          Go to Dashboard Anyway
         </button>
         <button
-          onClick={handleDisconnect}
-          disabled={isConnecting}
-          className="border border-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50"
+          onClick={() => window.location.href = '/'}
+          className="border border-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-50 transition-colors"
         >
-          {isConnecting ? 'Disconnecting...' : 'Disconnect'}
+          Return Home
         </button>
       </div>
     </div>
