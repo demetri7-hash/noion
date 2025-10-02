@@ -378,12 +378,12 @@ export default function POSConnectionFlow() {
       </div>
 
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-md mx-auto">
-        <h4 className="font-medium text-blue-900 mb-2">⏱️ What's happening now?</h4>
+        <h4 className="font-medium text-blue-900 mb-2">⏱️ What&apos;s happening now?</h4>
         <ul className="text-sm text-blue-700 space-y-2 text-left">
           <li>✅ Connection established successfully</li>
           <li>🔄 Your last 30 days of sales data is being synced</li>
           <li>⚡ This usually takes 2-3 minutes for most restaurants</li>
-          <li>📧 We'll email you when your data is ready!</li>
+          <li>📧 We&apos;ll email you when your data is ready!</li>
         </ul>
       </div>
 
