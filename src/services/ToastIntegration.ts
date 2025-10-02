@@ -291,6 +291,25 @@ export class ToastIntegrationService {
   }
 
   /**
+   * Generate OAuth authorization URL for Toast POS
+   */
+  getAuthorizationUrl(restaurantId: string): string {
+    const clientId = process.env.TOAST_CLIENT_ID || '';
+    const redirectUri = process.env.TOAST_REDIRECT_URI || '';
+    const scopes = process.env.TOAST_SCOPES || '';
+
+    const params = new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: redirectUri,
+      response_type: 'code',
+      scope: scopes,
+      state: restaurantId, // Use restaurantId as state for verification
+    });
+
+    return `${TOAST_AUTH_URL}/oauth/authorize?${params.toString()}`;
+  }
+
+  /**
    * Initiate OAuth 2.0 authentication with Toast
    */
   async authenticateRestaurant(credentials: IToastCredentials): Promise<IToastAuthResponse> {
