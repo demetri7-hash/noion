@@ -211,18 +211,57 @@ class RateLimiter {
 class EncryptionUtil {
   private static readonly algorithm = 'aes-256-gcm';
   private static readonly keyLength = 32;
-  
-  static encrypt(text: string, key: string): string {
-    const cipher = crypto.createCipher(this.algorithm, key);
+  private static readonly ivLength = 12; // GCM mode uses 12-byte IV
+
+  static encrypt(text: string, password: string): string {
+    // Generate key from password
+    const key = crypto.createHash('sha256').update(password).digest();
+
+    // Generate random IV
+    const iv = crypto.randomBytes(this.ivLength);
+
+    // Create cipher with IV
+    const cipher = crypto.createCipheriv(this.algorithm, key, iv);
+
+    // Encrypt the text
     let encrypted = cipher.update(text, 'utf8', 'hex');
     encrypted += cipher.final('hex');
-    return encrypted;
+
+    // Get auth tag (required for GCM mode)
+    const authTag = cipher.getAuthTag();
+
+    // Combine IV, auth tag, and encrypted data
+    const combined = Buffer.concat([
+      iv,
+      authTag,
+      Buffer.from(encrypted, 'hex')
+    ]);
+
+    return combined.toString('base64');
   }
-  
-  static decrypt(encryptedText: string, key: string): string {
-    const decipher = crypto.createDecipher(this.algorithm, key);
-    let decrypted = decipher.update(encryptedText, 'hex', 'utf8');
+
+  static decrypt(encryptedData: string, password: string): string {
+    // Generate key from password
+    const key = crypto.createHash('sha256').update(password).digest();
+
+    // Decode from base64
+    const combined = Buffer.from(encryptedData, 'base64');
+
+    // Extract components
+    const iv = combined.subarray(0, this.ivLength);
+    const authTag = combined.subarray(this.ivLength, this.ivLength + 16);
+    const encrypted = combined.subarray(this.ivLength + 16);
+
+    // Create decipher with IV
+    const decipher = crypto.createDecipheriv(this.algorithm, key, iv);
+
+    // Set auth tag (required for GCM mode)
+    decipher.setAuthTag(authTag);
+
+    // Decrypt the data
+    let decrypted = decipher.update(encrypted, undefined, 'utf8');
     decrypted += decipher.final('utf8');
+
     return decrypted;
   }
 }
@@ -354,7 +393,7 @@ export class ToastIntegrationService {
         clientId: credentials.clientId,
         encryptedAccessToken,
         lastSyncAt: new Date(),
-        managementGroupId: authResponse.managementGroups[0]?.guid,
+        managementGroupId: authResponse.managementGroups?.[0]?.guid,
         locationId: credentials.locationGuid
       };
 
@@ -413,9 +452,10 @@ export class ToastIntegrationService {
         this.encryptionKey
       );
 
-      // Format dates for Toast API
-      const startDateStr = startDate.toISOString().split('T')[0];
-      const endDateStr = endDate.toISOString().split('T')[0];
+      // Format dates for Toast API (ISO 8601 format for startDate/endDate)
+      // Toast recommends using startDate/endDate over businessDate
+      const startDateStr = startDate.toISOString(); // e.g., "2025-09-02T00:00:00.000Z"
+      const endDateStr = endDate.toISOString();     // e.g., "2025-10-02T00:00:00.000Z"
 
       const response = await this.client.get(
         `/orders/v2/orders`,
@@ -425,8 +465,8 @@ export class ToastIntegrationService {
             'Toast-Restaurant-External-ID': restaurant.posConfig.locationId || restaurant.posConfig.managementGroupId
           },
           params: {
-            businessDate: `${startDateStr}...${endDateStr}`,
-            pageToken: undefined,
+            startDate: startDateStr,
+            endDate: endDateStr,
             pageSize: 100
           }
         }
