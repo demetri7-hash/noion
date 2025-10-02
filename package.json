@@ -9,7 +9,8 @@
     "lint": "next lint",
     "test": "jest",
     "test:watch": "jest --watch",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "worker": "ts-node src/worker/index.ts"
   },
   "dependencies": {
     "@headlessui/react": "^1.7.0",
@@ -22,6 +23,7 @@
     "axios": "^1.6.0",
     "bcryptjs": "^2.4.3",
     "bull": "^4.12.0",
+    "bullmq": "^5.59.0",
     "class-transformer": "^0.5.0",
     "class-validator": "^0.14.0",
     "cors": "^2.8.5",
@@ -29,6 +31,7 @@
     "express": "^4.18.0",
     "handlebars": "^4.7.0",
     "helmet": "^7.1.0",
+    "ioredis": "^5.8.0",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.293.0",
     "mongoose": "^8.0.0",
@@ -67,6 +70,7 @@
     "mongodb-memory-server": "^9.1.0",
     "prettier": "^3.1.0",
     "supertest": "^6.3.0",
-    "ts-jest": "^29.1.0"
+    "ts-jest": "^29.1.0",
+    "ts-node": "^10.9.2"
   }
 }

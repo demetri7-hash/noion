@@ -5,7 +5,13 @@
  * Supports templates, tracking, and various email types
  */
 
+import sgMail from '@sendgrid/mail';
 import Restaurant from '@/models/Restaurant';
+
+// Initialize SendGrid if API key is available
+if (process.env.SENDGRID_API_KEY) {
+  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+}
 
 interface EmailOptions {
   to: string;
@@ -41,7 +47,7 @@ export class EmailService {
   private async sendEmail(options: EmailOptions): Promise<boolean> {
     try {
       // For development/testing, just log the email
-      if (process.env.NODE_ENV === 'development') {
+      if (process.env.NODE_ENV === 'development' && !process.env.SENDGRID_API_KEY) {
         console.log('📧 [DEV] Email would be sent:', {
           to: options.to,
           subject: options.subject,
@@ -50,19 +56,22 @@ export class EmailService {
         return true;
       }
 
-      // TODO: Implement actual SendGrid sending when API key is available
-      // const sgMail = require('@sendgrid/mail');
-      // sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-      // await sgMail.send({
-      //   to: options.to,
-      //   from: options.from || `${this.fromName} <${this.fromEmail}>`,
-      //   subject: options.subject,
-      //   text: options.text,
-      //   html: options.html,
-      // });
+      // Send using SendGrid
+      if (process.env.SENDGRID_API_KEY) {
+        await sgMail.send({
+          to: options.to,
+          from: options.from || `${this.fromName} <${this.fromEmail}>`,
+          subject: options.subject,
+          text: options.text,
+          html: options.html,
+        });
 
-      console.log('✅ Email sent successfully to:', options.to);
-      return true;
+        console.log('✅ Email sent successfully to:', options.to);
+        return true;
+      }
+
+      console.warn('⚠️ SendGrid API key not configured, email not sent');
+      return false;
     } catch (error) {
       console.error('❌ Email sending failed:', error);
       return false;
@@ -247,5 +256,159 @@ export class EmailService {
       console.error('Payment receipt email error:', error);
       return false;
     }
+  }
+
+  /**
+   * Send sync completion notification
+   */
+  async sendSyncCompletedEmail(
+    email: string,
+    restaurantName: string,
+    ordersImported: number,
+    duration: number
+  ): Promise<boolean> {
+    const durationMinutes = Math.round(duration / 1000 / 60);
+    const dashboardUrl = `${process.env.FRONTEND_URL || 'https://noion.ai'}/dashboard`;
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: #4F46E5; color: white; padding: 20px; text-align: center; }
+          .content { padding: 30px 20px; background: #f9f9f9; }
+          .stats { background: white; padding: 20px; margin: 20px 0; border-radius: 8px; }
+          .stat-item { margin: 10px 0; }
+          .stat-label { font-weight: bold; color: #666; }
+          .stat-value { font-size: 24px; color: #4F46E5; }
+          .button { display: inline-block; padding: 12px 24px; background: #4F46E5; color: white; text-decoration: none; border-radius: 6px; margin: 20px 0; }
+          .footer { text-align: center; color: #666; font-size: 12px; padding: 20px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>✅ Your Data is Ready!</h1>
+          </div>
+          <div class="content">
+            <p>Hi there,</p>
+            <p>Great news! We've successfully synced your data from <strong>${restaurantName}</strong>.</p>
+
+            <div class="stats">
+              <div class="stat-item">
+                <div class="stat-label">Orders Imported</div>
+                <div class="stat-value">${ordersImported.toLocaleString()}</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-label">Processing Time</div>
+                <div class="stat-value">${durationMinutes} min</div>
+              </div>
+            </div>
+
+            <p>Your dashboard is now populated with actionable insights and analytics.</p>
+
+            <a href="${dashboardUrl}" class="button">View Your Dashboard →</a>
+
+            <p>Best regards,<br>The NOION Analytics Team</p>
+          </div>
+          <div class="footer">
+            <p>NOION Analytics - AI-Powered Restaurant Intelligence</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const text = `
+Hi there,
+
+Great news! We've successfully synced ${ordersImported} orders from ${restaurantName}.
+
+The sync took ${durationMinutes} minute(s) and your dashboard is now ready to view.
+
+View your dashboard: ${dashboardUrl}
+
+Best regards,
+The NOION Analytics Team
+    `.trim();
+
+    return await this.sendEmail({
+      to: email,
+      subject: '✅ Your restaurant data is ready!',
+      html,
+      text
+    });
+  }
+
+  /**
+   * Send sync failure notification
+   */
+  async sendSyncFailedEmail(
+    email: string,
+    restaurantName: string,
+    error: string
+  ): Promise<boolean> {
+    const supportEmail = process.env.SUPPORT_EMAIL || 'support@noion.ai';
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: #DC2626; color: white; padding: 20px; text-align: center; }
+          .content { padding: 30px 20px; background: #f9f9f9; }
+          .error-box { background: #FEE2E2; border-left: 4px solid #DC2626; padding: 15px; margin: 20px 0; }
+          .footer { text-align: center; color: #666; font-size: 12px; padding: 20px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>⚠️ Sync Issue</h1>
+          </div>
+          <div class="content">
+            <p>Hi there,</p>
+            <p>We encountered an issue while syncing data from <strong>${restaurantName}</strong>.</p>
+
+            <div class="error-box">
+              <strong>Error:</strong> ${error}
+            </div>
+
+            <p>Our team has been automatically notified and is working on a fix. We'll retry the sync shortly.</p>
+            <p>If you need immediate assistance, please contact us at <a href="mailto:${supportEmail}">${supportEmail}</a>.</p>
+
+            <p>Best regards,<br>The NOION Analytics Team</p>
+          </div>
+          <div class="footer">
+            <p>NOION Analytics - AI-Powered Restaurant Intelligence</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const text = `
+Hi there,
+
+We encountered an issue while syncing data from ${restaurantName}.
+
+Error: ${error}
+
+Our team has been notified and is working on a fix. If you need immediate assistance, please contact us at ${supportEmail}.
+
+Best regards,
+The NOION Analytics Team
+    `.trim();
+
+    return await this.sendEmail({
+      to: email,
+      subject: '⚠️ Issue syncing your restaurant data',
+      html,
+      text
+    });
   }
 }

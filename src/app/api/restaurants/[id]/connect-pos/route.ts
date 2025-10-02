@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import Restaurant from '@/models/Restaurant';
+import SyncJob from '@/models/SyncJob';
 import { ToastIntegration } from '@/services/ToastIntegration';
 import { verifyAuth, unauthorizedResponse } from '@/middleware/auth';
+import { enqueueSyncJob } from '@/lib/queue';
 
 /**
  * POST /api/restaurants/[id]/connect-pos
@@ -124,37 +126,58 @@ export async function POST(
           );
         }
 
-        console.log('Connecting to Toast using environment credentials...');
+        console.log('Enqueuing Toast sync job...');
 
         try {
-          // Connect to Toast with environment credentials
-          const toastService = new ToastIntegration();
-          console.log('Calling toastService.connectRestaurant...');
-
-          // Use the actual restaurant._id (MongoDB ObjectId) instead of params.id
           const restaurantId = String(restaurant._id);
-          await toastService.connectRestaurant(restaurantId, credentials);
 
-          console.log('Toast connection successful, updating restaurant...');
+          // Enqueue background job instead of running sync directly
+          const jobId = await enqueueSyncJob({
+            restaurantId,
+            posType: 'toast',
+            credentials,
+            options: {
+              startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // Last 30 days
+              endDate: new Date(),
+              fullSync: true
+            },
+            notificationEmail: restaurant.owner.email
+          });
 
-          // Update restaurant with POS type
+          // Create SyncJob record in database
+          const syncJob = await SyncJob.create({
+            restaurantId: restaurant._id,
+            posType: 'toast',
+            status: 'pending',
+            jobId,
+            notificationEmail: restaurant.owner.email,
+            maxAttempts: 3
+          });
+
+          // Update restaurant with POS type (but don't mark as connected yet)
           restaurant.posConfig.type = posType;
           await restaurant.save();
 
-          console.log('✅ Toast connected successfully with restaurant GUID:', credentials.locationGuid);
+          console.log('✅ Toast sync job enqueued:', jobId);
 
           return NextResponse.json({
             success: true,
             data: {
               posType: 'toast',
-              connected: true,
+              connected: false, // Not connected yet, job is pending
               restaurantId: String(restaurant._id),
-              restaurantGuid: credentials.locationGuid
+              restaurantGuid: credentials.locationGuid,
+              syncJob: {
+                id: String(syncJob._id),
+                jobId,
+                status: 'pending',
+                message: 'Your data is being synced in the background. We\'ll email you when it\'s ready!'
+              }
             },
           });
-        } catch (toastError) {
-          console.error('Toast connection failed:', toastError);
-          throw toastError;
+        } catch (error) {
+          console.error('Failed to enqueue Toast sync job:', error);
+          throw error;
         }
       }
       case 'square':
