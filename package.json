@@ -10,7 +10,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "type-check": "tsc --noEmit",
-    "worker": "ts-node src/worker/index.ts"
+    "worker": "ts-node -r tsconfig-paths/register src/worker/index.ts"
   },
   "dependencies": {
     "@headlessui/react": "^1.7.0",
@@ -71,6 +71,7 @@
     "prettier": "^3.1.0",
     "supertest": "^6.3.0",
     "ts-jest": "^29.1.0",
-    "ts-node": "^10.9.2"
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0"
   }
 }
