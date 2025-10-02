@@ -530,19 +530,19 @@ export class ToastIntegrationService {
       // Calculate items
       const items = check.selections.map(selection => ({
         id: selection.guid,
-        name: selection.item?.entityType || selection.item?.name || 'Unknown Item',
+        name: selection.item?.entityType || 'Unknown Item',
         category: 'General', // Toast doesn't always provide category
         quantity: selection.quantity,
         unitPrice: selection.price / selection.quantity,
         totalPrice: selection.price,
         modifiers: selection.modifiers?.map(mod => ({
           id: mod.guid,
-          name: mod.modifier?.entityType || mod.modifier?.name || 'Unknown Modifier',
+          name: mod.modifier?.entityType || 'Unknown Modifier',
           price: 0 // Toast doesn't always provide modifier price
         })) || [],
         discounts: selection.appliedDiscounts?.map(discount => ({
           id: discount.guid,
-          name: discount.discount?.entityType || discount.discount?.name || 'Unknown Discount',
+          name: discount.discount?.entityType || 'Unknown Discount',
           type: 'fixed' as const,
           value: discount.discountAmount,
           amount: discount.discountAmount
