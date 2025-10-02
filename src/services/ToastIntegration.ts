@@ -434,10 +434,11 @@ export class ToastIntegrationService {
 
   /**
    * Fetch transactions from Toast API
+   * Note: Toast API only allows 1-hour time intervals, so we chunk the date range
    */
   async fetchTransactions(
-    restaurantId: string, 
-    startDate: Date, 
+    restaurantId: string,
+    startDate: Date,
     endDate: Date
   ): Promise<IToastTransaction[]> {
     try {
@@ -452,27 +453,61 @@ export class ToastIntegrationService {
         this.encryptionKey
       );
 
-      // Format dates for Toast API (ISO 8601 format for startDate/endDate)
-      // Toast recommends using startDate/endDate over businessDate
-      const startDateStr = startDate.toISOString(); // e.g., "2025-09-02T00:00:00.000Z"
-      const endDateStr = endDate.toISOString();     // e.g., "2025-10-02T00:00:00.000Z"
+      // Toast API only allows 1-hour intervals
+      // Break the date range into 1-hour chunks
+      const allTransactions: IToastTransaction[] = [];
+      const oneHourMs = 60 * 60 * 1000; // 1 hour in milliseconds
 
-      const response = await this.client.get(
-        `/orders/v2/orders`,
-        {
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Toast-Restaurant-External-ID': restaurant.posConfig.locationId || restaurant.posConfig.managementGroupId
-          },
-          params: {
-            startDate: startDateStr,
-            endDate: endDateStr,
-            pageSize: 100
-          }
+      let currentStart = new Date(startDate.getTime());
+      const finalEnd = new Date(endDate.getTime());
+
+      console.log(`Fetching Toast transactions from ${startDate.toISOString()} to ${endDate.toISOString()}`);
+      console.log(`Breaking into 1-hour chunks due to Toast API limitation...`);
+
+      let chunkCount = 0;
+      while (currentStart < finalEnd) {
+        // Calculate end of this 1-hour chunk
+        const currentEnd = new Date(Math.min(
+          currentStart.getTime() + oneHourMs,
+          finalEnd.getTime()
+        ));
+
+        chunkCount++;
+        console.log(`Fetching chunk ${chunkCount}: ${currentStart.toISOString()} to ${currentEnd.toISOString()}`);
+
+        try {
+          const response = await this.client.get(
+            `/orders/v2/orders`,
+            {
+              headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Toast-Restaurant-External-ID': restaurant.posConfig.locationId || restaurant.posConfig.managementGroupId
+              },
+              params: {
+                startDate: currentStart.toISOString(),
+                endDate: currentEnd.toISOString(),
+                pageSize: 100
+              }
+            }
+          );
+
+          const chunkData = response.data || [];
+          allTransactions.push(...chunkData);
+          console.log(`  ✓ Chunk ${chunkCount}: Retrieved ${chunkData.length} orders`);
+        } catch (error) {
+          console.error(`  ✗ Chunk ${chunkCount} failed:`, error);
+          // Continue with other chunks even if one fails
         }
-      );
 
-      return response.data || [];
+        // Move to next chunk
+        currentStart = new Date(currentEnd.getTime());
+
+        // Add small delay to respect rate limits (1000 req/hour = ~1 req/3.6s)
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+
+      console.log(`✅ Total transactions fetched: ${allTransactions.length} from ${chunkCount} chunks`);
+      return allTransactions;
     } catch (error) {
       console.error('Failed to fetch transactions from Toast:', error);
       throw error;
@@ -628,19 +663,20 @@ export class ToastIntegrationService {
   async performInitialSync(restaurantId: string, accessToken: string): Promise<void> {
     try {
       console.log(`Starting initial sync for restaurant ${restaurantId}`);
-      
-      // Fetch last 30 days of data
+
+      // Fetch last 7 days of data (reduced from 30 to avoid timeout with 1-hour API chunks)
+      // Toast API only allows 1-hour intervals, so 30 days = 720 API calls which may timeout
       const endDate = new Date();
       const startDate = new Date();
-      startDate.setDate(startDate.getDate() - 30);
+      startDate.setDate(startDate.getDate() - 7); // 7 days = 168 API calls (~17 seconds with delays)
 
       const toastTransactions = await this.fetchTransactions(restaurantId, startDate, endDate);
-      
+
       console.log(`Fetched ${toastTransactions.length} transactions from Toast`);
 
       // Import transactions
       await this.importTransactions(restaurantId, toastTransactions);
-      
+
       console.log(`Initial sync completed for restaurant ${restaurantId}`);
     } catch (error) {
       console.error('Initial sync failed:', error);
