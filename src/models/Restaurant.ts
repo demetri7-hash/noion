@@ -185,10 +185,9 @@ const RestaurantSchema = new Schema<IRestaurant>({
   owner: {
     firstName: { type: String, required: true, trim: true },
     lastName: { type: String, required: true, trim: true },
-    email: { 
-      type: String, 
-      required: true, 
-      unique: true, 
+    email: {
+      type: String,
+      required: true,
       lowercase: true,
       match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Please provide a valid email']
     },

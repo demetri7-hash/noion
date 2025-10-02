@@ -83,7 +83,6 @@ const RestaurantSchema = new mongoose_1.Schema({
         email: {
             type: String,
             required: true,
-            unique: true,
             lowercase: true,
             match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Please provide a valid email']
         },
