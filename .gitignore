@@ -12,7 +12,7 @@
 
 # production
 /build
-/dist
+# /dist - commented out so Railway can commit compiled worker
 
 # misc
 .DS_Store

@@ -5,12 +5,14 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:worker": "tsc --project tsconfig.worker.json",
     "start": "next start",
     "lint": "next lint",
     "test": "jest",
     "test:watch": "jest --watch",
     "type-check": "tsc --noEmit",
-    "worker": "ts-node -r tsconfig-paths/register src/worker/index.ts"
+    "worker:dev": "ts-node -r tsconfig-paths/register src/worker/index.ts",
+    "worker": "node dist/worker/index.js"
   },
   "dependencies": {
     "@headlessui/react": "^1.7.0",
