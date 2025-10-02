@@ -75,7 +75,7 @@ export async function POST(
     }
 
     // Update restaurant with POS type
-    restaurant.posSystem.type = posType;
+    restaurant.posConfig.type = posType;
     await restaurant.save();
 
     return NextResponse.json({
