@@ -67,67 +67,52 @@ export default function AnalyticsDashboard() {
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      
-      // Mock data for development
-      // In production, fetch from API
-      const mockMetrics: IDashboardMetrics = {
-        totalRevenue: {
-          current: 47500,
-          previous: 42300,
-          change: 12.3
-        },
-        customerCount: {
-          current: 1247,
-          previous: 1156,
-          change: 7.9
-        },
-        averageTicket: {
-          current: 38.12,
-          previous: 36.58,
-          change: 4.2
-        },
-        peakHours: {
-          start: '6:00 PM',
-          end: '8:30 PM',
-          revenue: 18750
-        }
-      };
+      console.log('Loading dashboard data from API...');
 
-      const mockInsights: IRevenueInsight[] = [
-        {
-          id: '1',
-          title: 'Upselling Opportunity',
-          description: 'Servers could increase revenue by $1,200/month with systematic upselling of appetizers during peak hours',
-          impact: 1200,
-          category: 'Sales Optimization',
-          priority: 'high',
-          status: 'new'
-        },
-        {
-          id: '2',
-          title: 'Menu Engineering',
-          description: 'Repositioning high-margin items could boost profits by $800/month',
-          impact: 800,
-          category: 'Menu Strategy',
-          priority: 'medium',
-          status: 'new'
-        },
-        {
-          id: '3',
-          title: 'Staffing Optimization',
-          description: 'Adding one server during Friday peak hours could serve 20% more customers',
-          impact: 2100,
-          category: 'Operations',
-          priority: 'high',
-          status: 'viewed'
-        }
-      ];
+      // Get restaurantId from localStorage (set during OAuth callback)
+      const restaurantId = typeof window !== 'undefined'
+        ? localStorage.getItem('restaurantId')
+        : null;
 
-      setMetrics(mockMetrics);
-      setInsights(mockInsights);
-      
+      if (!restaurantId) {
+        console.warn('No restaurant ID found - user needs to connect POS');
+        setMetrics(null);
+        setInsights([]);
+        setLoading(false);
+        return;
+      }
+
+      console.log('Fetching dashboard for restaurant:', restaurantId);
+
+      // Fetch real data from API
+      const response = await fetch(`/api/dashboard/${restaurantId}?timeRange=${timeRange}`);
+      const result = await response.json();
+
+      console.log('Dashboard API response:', result);
+
+      if (result.success && result.data) {
+        if (result.data.hasData) {
+          setMetrics(result.data.metrics);
+          setInsights(result.data.insights || []);
+          console.log('✅ Dashboard loaded with real data:', {
+            transactions: result.data.transactionCount,
+            insights: result.data.insights?.length || 0
+          });
+        } else {
+          setMetrics(null);
+          setInsights([]);
+          console.log('⏳ No transaction data yet - POS needs to sync');
+        }
+      } else {
+        console.error('Dashboard API returned error:', result);
+        setMetrics(null);
+        setInsights([]);
+      }
+
     } catch (error) {
       console.error('Failed to load dashboard data:', error);
+      setMetrics(null);
+      setInsights([]);
     } finally {
       setLoading(false);
     }
@@ -208,6 +193,30 @@ export default function AnalyticsDashboard() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Data Syncing Notice */}
+        {!metrics && insights.length === 0 && (
+          <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-6 mb-8">
+            <div className="flex items-start">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mt-0.5 mr-3 flex-shrink-0"></div>
+              <div>
+                <h3 className="font-semibold text-blue-900 mb-1">🚀 AI Analysis in Progress...</h3>
+                <p className="text-sm text-blue-700 mb-2">
+                  We&apos;re crunching your Toast POS data right now! Your dashboard will populate instantly once sync completes.
+                </p>
+                <p className="text-xs text-blue-600 font-medium mb-2">
+                  💡 Refresh this page in a few moments to see your real-time insights
+                </p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="text-sm bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+                >
+                  Refresh Now
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Key Metrics */}
         {metrics && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -353,11 +362,17 @@ export default function AnalyticsDashboard() {
             
             {insights.length === 0 && (
               <div className="text-center py-8">
-                <Activity className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500">No insights available yet.</p>
-                <p className="text-sm text-gray-400 mt-1">
-                  Connect your POS system to start getting AI-powered insights.
+                <Activity className="h-12 w-12 text-blue-400 mx-auto mb-4 animate-pulse" />
+                <p className="text-gray-700 font-medium">🔄 Syncing your Toast POS data...</p>
+                <p className="text-sm text-gray-500 mt-2">
+                  AI-powered insights appear instantly once data sync completes
                 </p>
+                <p className="text-sm text-blue-600 font-medium mt-2">
+                  💡 Try refreshing in a few moments
+                </p>
+                <div className="mt-4">
+                  <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                </div>
               </div>
             )}
           </div>

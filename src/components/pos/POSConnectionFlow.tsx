@@ -1,16 +1,18 @@
 'use client';
 
 import React, { useState } from 'react';
-import { 
-  CheckCircle, 
-  XCircle, 
-  AlertCircle, 
-  Loader, 
+import { useRouter } from 'next/navigation';
+import {
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Loader,
   ExternalLink,
   Shield,
   Zap,
   Database
 } from 'lucide-react';
+import ToastCredentialsForm from './ToastCredentialsForm';
 
 // POS system types
 interface IPOSSystem {
@@ -36,6 +38,7 @@ interface IConnectionStatus {
  * Handles POS system integration and connection management
  */
 export default function POSConnectionFlow() {
+  const router = useRouter();
   const [selectedPOS, setSelectedPOS] = useState<IPOSSystem | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<IConnectionStatus>({
     isConnected: false,
@@ -89,14 +92,39 @@ export default function POSConnectionFlow() {
     setConnectionStatus({ ...connectionStatus, status: 'connecting' });
 
     try {
-      // Simulate connection process
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      console.log('Connecting to Toast POS using environment credentials...');
 
-      // In production, this would:
-      // 1. Redirect to POS OAuth flow
-      // 2. Handle OAuth callback
-      // 3. Store access tokens securely
-      // 4. Initiate data sync
+      // For now, use a hardcoded test restaurant ID from localStorage or create one
+      const testRestaurantId = typeof window !== 'undefined'
+        ? localStorage.getItem('restaurantId') || 'test-restaurant-id'
+        : 'test-restaurant-id';
+
+      // Call the API to connect to Toast (credentials come from env vars)
+      const response = await fetch(`/api/restaurants/${testRestaurantId}/connect-pos`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          posType: 'toast'
+        })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || result.hint || 'Connection failed');
+      }
+
+      console.log('✅ Toast POS connected successfully!', result);
+
+      // Store restaurant ID for dashboard access
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('restaurantId', testRestaurantId);
+        if (result.data?.restaurantGuid) {
+          localStorage.setItem('toastRestaurantGuid', result.data.restaurantGuid);
+        }
+      }
 
       setConnectionStatus({
         isConnected: true,
@@ -111,7 +139,7 @@ export default function POSConnectionFlow() {
         isConnected: false,
         lastSync: null,
         status: 'error',
-        error: 'Failed to connect to POS system. Please try again.'
+        error: error instanceof Error ? error.message : 'Failed to connect to POS system. Please try again.'
       });
     } finally {
       setIsConnecting(false);
@@ -244,59 +272,81 @@ export default function POSConnectionFlow() {
     </div>
   );
 
-  const renderAuthorization = () => (
-    <div className="space-y-6 text-center">
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Authorize Connection</h2>
-        <p className="text-gray-600">
-          You&apos;ll be redirected to {selectedPOS?.name} to authorize the connection
-        </p>
-      </div>
-
-      {selectedPOS && (
-        <div className="bg-white border border-gray-200 rounded-lg p-6 max-w-md mx-auto">
-          <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-            <span className="text-2xl font-bold text-gray-600">{selectedPOS.name.charAt(0)}</span>
+  const renderAuthorization = () => {
+    if (selectedPOS?.id === 'toast') {
+      return (
+        <div className="space-y-6 text-center">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Connect to Toast POS</h2>
+            <p className="text-gray-600">
+              Using environment credentials for testing
+            </p>
           </div>
-          <h3 className="font-semibold text-gray-900 mb-2">{selectedPOS.name}</h3>
-          <p className="text-sm text-gray-600 mb-4">{selectedPOS.description}</p>
-          
-          <div className="space-y-3 text-left">
-            <div className="flex items-center text-sm text-gray-600">
-              <Database className="h-4 w-4 text-blue-500 mr-2" />
-              Read-only access to sales data
+
+          {selectedPOS && (
+            <div className="bg-white border border-gray-200 rounded-lg p-6 max-w-md mx-auto">
+              <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl font-bold text-gray-600">{selectedPOS.name.charAt(0)}</span>
+              </div>
+              <h3 className="font-semibold text-gray-900 mb-2">{selectedPOS.name}</h3>
+              <p className="text-sm text-gray-600 mb-4">{selectedPOS.description}</p>
+
+              <div className="space-y-3 text-left">
+                <div className="flex items-center text-sm text-gray-600">
+                  <Database className="h-4 w-4 text-blue-500 mr-2" />
+                  Read-only access to sales data
+                </div>
+                <div className="flex items-center text-sm text-gray-600">
+                  <Zap className="h-4 w-4 text-blue-500 mr-2" />
+                  Real-time sync for instant insights
+                </div>
+                <div className="flex items-center text-sm text-gray-600">
+                  <Shield className="h-4 w-4 text-blue-500 mr-2" />
+                  Bank-level security and encryption
+                </div>
+              </div>
             </div>
-            <div className="flex items-center text-sm text-gray-600">
-              <Zap className="h-4 w-4 text-blue-500 mr-2" />
-              Real-time sync for instant insights
-            </div>
-            <div className="flex items-center text-sm text-gray-600">
-              <Shield className="h-4 w-4 text-blue-500 mr-2" />
-              Bank-level security and encryption
-            </div>
+          )}
+
+          <div className="space-y-3">
+            <button
+              onClick={handleConnect}
+              disabled={isConnecting}
+              className="bg-blue-600 text-white py-3 px-6 rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center mx-auto"
+            >
+              {isConnecting ? (
+                <>
+                  <Loader className="h-4 w-4 animate-spin mr-2" />
+                  Connecting...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Connect to Toast
+                </>
+              )}
+            </button>
+
+            <button
+              onClick={() => setStep('select')}
+              className="text-gray-600 hover:text-gray-800 text-sm"
+            >
+              ← Back to POS selection
+            </button>
           </div>
         </div>
-      )}
+      );
+    }
 
-      <div className="space-y-3">
-        <button
-          onClick={handleConnect}
-          disabled={isConnecting}
-          className="bg-blue-600 text-white py-3 px-6 rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center mx-auto"
-        >
-          {isConnecting ? (
-            <>
-              <Loader className="h-4 w-4 animate-spin mr-2" />
-              Connecting...
-            </>
-          ) : (
-            <>
-              <ExternalLink className="h-4 w-4 mr-2" />
-              Authorize Connection
-            </>
-          )}
-        </button>
-        
+    // Fallback for other POS systems (not yet implemented)
+    return (
+      <div className="space-y-6 text-center">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Authorize Connection</h2>
+          <p className="text-gray-600">
+            {selectedPOS?.name} integration coming soon
+          </p>
+        </div>
         <button
           onClick={() => setStep('select')}
           className="text-gray-600 hover:text-gray-800 text-sm"
@@ -304,8 +354,8 @@ export default function POSConnectionFlow() {
           ← Back to POS selection
         </button>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderComplete = () => (
     <div className="space-y-6 text-center">
@@ -321,20 +371,26 @@ export default function POSConnectionFlow() {
       </div>
 
       <div className="bg-green-50 border border-green-200 rounded-lg p-4 max-w-md mx-auto">
-        <h4 className="font-medium text-green-900 mb-2">What happens next?</h4>
+        <h4 className="font-medium text-green-900 mb-2">🎉 What happens next?</h4>
         <ul className="text-sm text-green-700 space-y-1 text-left">
-          <li>• Data sync will begin immediately</li>
-          <li>• First insights available in 2-4 hours</li>
-          <li>• Full analytics dashboard in 24 hours</li>
-          <li>• Your free discovery report will be generated</li>
+          <li>✨ Your data is syncing now!</li>
+          <li>📊 Dashboard available instantly - click below</li>
+          <li>🤖 AI is analyzing your last 30 days of sales</li>
+          <li>📧 Your free discovery report will be emailed soon</li>
         </ul>
       </div>
 
       <div className="space-x-3">
-        <button className="bg-blue-600 text-white py-2 px-6 rounded-md hover:bg-blue-700 transition-colors">
+        <button
+          onClick={() => {
+            console.log('Dashboard button clicked - navigating to /dashboard');
+            router.push('/dashboard');
+          }}
+          className="bg-blue-600 text-white py-2 px-6 rounded-md hover:bg-blue-700 transition-colors"
+        >
           View Dashboard
         </button>
-        <button 
+        <button
           onClick={handleDisconnect}
           disabled={isConnecting}
           className="border border-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50"

@@ -291,23 +291,16 @@ export class ToastIntegrationService {
   }
 
   /**
-   * Generate OAuth authorization URL for Toast POS
+   * NOTE: Toast does NOT use traditional OAuth 2.0 authorization code flow
+   * There is no /oauth/authorize endpoint or redirect-based user authorization
+   *
+   * Instead, Toast uses:
+   * 1. Partner Program: Restaurants enable integrations in Toast Web (1-click)
+   * 2. Webhooks: You receive notifications when restaurants connect
+   * 3. Manual GUID Entry: For testing/custom integrations (temporary solution)
+   *
+   * This method has been removed as it generated a fake OAuth URL
    */
-  getAuthorizationUrl(restaurantId: string): string {
-    const clientId = process.env.TOAST_CLIENT_ID || '';
-    const redirectUri = process.env.TOAST_REDIRECT_URI || '';
-    const scopes = process.env.TOAST_SCOPES || '';
-
-    const params = new URLSearchParams({
-      client_id: clientId,
-      redirect_uri: redirectUri,
-      response_type: 'code',
-      scope: scopes,
-      state: restaurantId, // Use restaurantId as state for verification
-    });
-
-    return `${TOAST_AUTH_URL}/oauth/authorize?${params.toString()}`;
-  }
 
   /**
    * Initiate OAuth 2.0 authentication with Toast
@@ -319,7 +312,7 @@ export class ToastIntegrationService {
         {
           clientId: credentials.clientId,
           clientSecret: credentials.clientSecret,
-          userAccessToken: credentials.userAccessToken
+          userAccessType: 'TOAST_MACHINE_CLIENT'
         }
       );
 
@@ -429,7 +422,7 @@ export class ToastIntegrationService {
         {
           headers: {
             'Authorization': `Bearer ${accessToken}`,
-            'Toast-Restaurant-External-ID': restaurant.posConfig.managementGroupId
+            'Toast-Restaurant-External-ID': restaurant.posConfig.locationId || restaurant.posConfig.managementGroupId
           },
           params: {
             businessDate: `${startDateStr}...${endDateStr}`,
