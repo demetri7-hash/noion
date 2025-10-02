@@ -36,8 +36,9 @@ export async function POST(
       );
     }
 
-    const generator = new InsightGenerator(params.restaurantId);
+    const generator = new InsightGenerator();
     const insight = await generator.generateInsights(
+      params.restaurantId,
       new Date(startDate),
       new Date(endDate),
       type
