@@ -29,7 +29,7 @@ export async function GET(
     }
 
     // Check ownership
-    if (restaurant._id.toString() !== auth.restaurantId) {
+    if (String(restaurant._id) !== auth.restaurantId) {
       return NextResponse.json(
         { error: 'Access denied' },
         { status: 403 }
@@ -77,7 +77,7 @@ export async function PUT(
       );
     }
 
-    if (restaurant._id.toString() !== auth.restaurantId) {
+    if (String(restaurant._id) !== auth.restaurantId) {
       return NextResponse.json(
         { error: 'Access denied' },
         { status: 403 }
