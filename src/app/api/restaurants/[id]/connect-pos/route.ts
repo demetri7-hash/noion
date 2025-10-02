@@ -39,7 +39,7 @@ export async function POST(
       );
     }
 
-    if (restaurant._id.toString() !== auth.restaurantId) {
+    if (String(restaurant._id) !== auth.restaurantId) {
       return NextResponse.json(
         { error: 'Access denied' },
         { status: 403 }
