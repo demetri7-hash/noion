@@ -6,8 +6,10 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { authorize } from '@/middleware/authorize';
-import { Task, Workflow, AuditLog } from '@/models';
+import { Task, Workflow, AuditLog, Restaurant } from '@/models';
 import connectDB from '@/lib/mongodb';
+import { calculateTaskPoints, awardPoints, updateStreak } from '@/lib/points';
+import { checkBadges } from '@/lib/badges';
 
 export const runtime = 'nodejs';
 
@@ -186,7 +188,7 @@ export async function PUT(
       { new: true }
     );
 
-    // Update workflow completion count
+    // Update workflow completion count and award points
     if (status === 'completed' && task.status !== 'completed') {
       await Workflow.findByIdAndUpdate(task.workflowId, {
         $inc: {
@@ -207,6 +209,49 @@ export async function PUT(
         updatedWorkflow.editableUntil = midnight;
 
         await updatedWorkflow.save();
+      }
+
+      // Award points for task completion
+      try {
+        // Get user's current streak
+        const restaurant = await Restaurant.findOne({
+          _id: user.restaurantId,
+          'owner.userId': user.userId
+        });
+        const streak = restaurant?.owner.streak || 0;
+
+        // Calculate points with bonuses
+        const pointsCalc = await calculateTaskPoints({
+          task: updatedTask,
+          completedAt: new Date(),
+          dueDate: workflow?.dueDate,
+          hasPhoto: !!updatedTask?.photoUrl,
+          hasSignature: !!updatedTask?.signatureUrl,
+          streak
+        });
+
+        // Award points to user
+        await awardPoints({
+          userId: user.userId,
+          restaurantId: user.restaurantId,
+          calculation: pointsCalc,
+          entityType: 'task',
+          entityId: updatedTask?._id?.toString() || params.id
+        });
+
+        // Update streak
+        await updateStreak(user.userId, user.restaurantId);
+
+        // Check for badge unlocks
+        const newBadges = await checkBadges(user.userId, user.restaurantId);
+
+        // TODO: Send notifications for new badges
+        if (newBadges.length > 0) {
+          console.log(`User ${user.userId} unlocked ${newBadges.length} new badges!`);
+        }
+      } catch (pointsError) {
+        console.error('Error awarding points:', pointsError);
+        // Don't fail the task completion if points fail
       }
     }
 

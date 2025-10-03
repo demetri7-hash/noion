@@ -49,6 +49,7 @@ export enum UserRole {
 
 // Interface for owner information
 export interface IOwnerInfo {
+  userId?: string;                // User ID (for multi-user support)
   firstName: string;
   lastName: string;
   email: string;
