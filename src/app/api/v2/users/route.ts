@@ -10,6 +10,9 @@ import { Restaurant, UserRole } from '@/models';
 import { connectDB } from '@/lib/mongodb';
 import bcrypt from 'bcryptjs';
 
+// Force Node.js runtime for Casbin compatibility
+export const runtime = 'nodejs';
+
 /**
  * GET /api/v2/users
  * List users - scope based on requester's role

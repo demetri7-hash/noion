@@ -106,9 +106,9 @@ export async function calculateManagerAnalytics(
   const transactions = await Transaction.find({
     restaurantId: new Types.ObjectId(restaurantId),
     transactionDate: { $gte: startDate, $lte: endDate }
-  });
+  }).lean();
 
-  const totalSales = transactions.reduce((sum, t) => sum + (t.totals?.total || 0), 0);
+  const totalSales = transactions.reduce((sum, t) => sum + ((t as any).totals?.total || 0), 0);
   const transactionCount = transactions.length;
   const averageTicket = transactionCount > 0 ? totalSales / transactionCount : 0;
 
@@ -179,9 +179,9 @@ export async function getTeamMemberStats(
     restaurantId: new Types.ObjectId(restaurantId),
     'employee.id': userId,
     transactionDate: { $gte: startDate, $lte: endDate }
-  });
+  }).lean();
 
-  const totalSales = transactions.reduce((sum, t) => sum + (t.totals?.total || 0), 0);
+  const totalSales = transactions.reduce((sum, t) => sum + ((t as any).totals?.total || 0), 0);
   const transactionCount = transactions.length;
   const averageTicket = transactionCount > 0 ? totalSales / transactionCount : 0;
 

@@ -14,6 +14,9 @@ import { authorize } from '@/middleware/authorize';
 import { calculateManagerAnalytics } from '@/lib/analytics/managerAnalytics';
 import connectDB from '@/lib/mongodb';
 
+// Force Node.js runtime for Casbin compatibility
+export const runtime = 'nodejs';
+
 export async function GET(request: NextRequest) {
   // Authorize: managers and above can read team analytics
   const authResult = await authorize('analytics', 'read')(request);

@@ -14,6 +14,9 @@ import { authorize } from '@/middleware/authorize';
 import { calculateEmployeeAnalytics } from '@/lib/analytics/employeeAnalytics';
 import connectDB from '@/lib/mongodb';
 
+// Force Node.js runtime for Casbin compatibility
+export const runtime = 'nodejs';
+
 export async function GET(request: NextRequest) {
   // Authorize: employees can only read their own analytics
   const authResult = await authorize('analytics', 'read')(request);

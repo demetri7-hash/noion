@@ -95,9 +95,9 @@ export async function calculateOwnerAnalytics(
   const transactions = await Transaction.find({
     restaurantId: new Types.ObjectId(restaurantId),
     transactionDate: { $gte: startDate, $lte: endDate }
-  });
+  }).lean();
 
-  const totalRevenue = transactions.reduce((sum, t) => sum + (t.totals?.total || 0), 0);
+  const totalRevenue = transactions.reduce((sum, t) => sum + ((t as any).totals?.total || 0), 0);
   const totalTransactions = transactions.length;
   const averageTicket = totalTransactions > 0 ? totalRevenue / totalTransactions : 0;
 
@@ -109,9 +109,9 @@ export async function calculateOwnerAnalytics(
   const prevTransactions = await Transaction.find({
     restaurantId: new Types.ObjectId(restaurantId),
     transactionDate: { $gte: prevStart, $lte: prevEnd }
-  });
+  }).lean();
 
-  const prevRevenue = prevTransactions.reduce((sum, t) => sum + (t.totals?.total || 0), 0);
+  const prevRevenue = prevTransactions.reduce((sum, t) => sum + ((t as any).totals?.total || 0), 0);
   const revenueChange = prevRevenue > 0 ? ((totalRevenue - prevRevenue) / prevRevenue) * 100 : 0;
 
   // Revenue by day
@@ -120,29 +120,29 @@ export async function calculateOwnerAnalytics(
     if (!acc[date]) {
       acc[date] = { date: new Date(t.transactionDate), amount: 0 };
     }
-    acc[date].amount += t.totals?.total || 0;
+    acc[date].amount += (t as any).totals?.total || 0;
     return acc;
   }, {} as Record<string, { date: Date; amount: number }>);
 
   // Revenue by channel
   const byChannel = transactions.reduce((acc, t) => {
-    const channel = t.orderType || 'dine-in';
+    const channel = (t as any).orderType || 'dine-in';
     if (!acc[channel]) {
       acc[channel] = { channel, amount: 0, count: 0 };
     }
-    acc[channel].amount += t.totals?.total || 0;
+    acc[channel].amount += (t as any).totals?.total || 0;
     acc[channel].count += 1;
     return acc;
   }, {} as Record<string, { channel: string; amount: number; count: number }>);
 
   // Revenue by employee
   const byEmployee = transactions.reduce((acc, t) => {
-    const employeeId = t.employee?.id || 'unknown';
-    const employeeName = t.employee?.name || 'Unknown';
+    const employeeId = (t as any).employee?.id || 'unknown';
+    const employeeName = (t as any).employee?.name || 'Unknown';
     if (!acc[employeeId]) {
       acc[employeeId] = { employeeId, name: employeeName, amount: 0 };
     }
-    acc[employeeId].amount += t.totals?.total || 0;
+    acc[employeeId].amount += (t as any).totals?.total || 0;
     return acc;
   }, {} as Record<string, { employeeId: string; name: string; amount: number }>);
 

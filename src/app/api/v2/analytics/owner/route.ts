@@ -14,6 +14,9 @@ import { authorize } from '@/middleware/authorize';
 import { calculateOwnerAnalytics } from '@/lib/analytics/ownerAnalytics';
 import connectDB from '@/lib/mongodb';
 
+// Force Node.js runtime for Casbin compatibility
+export const runtime = 'nodejs';
+
 export async function GET(request: NextRequest) {
   // Authorize: only owners and admins can read business-wide analytics
   const authResult = await authorize('analytics', 'read')(request);

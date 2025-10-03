@@ -77,14 +77,14 @@ export async function calculateEmployeeAnalytics(
     restaurantId: new Types.ObjectId(restaurantId),
     'employee.id': userId,
     transactionDate: { $gte: startDate, $lte: endDate }
-  });
+  }).lean();
 
-  const totalSales = transactions.reduce((sum, t) => sum + (t.totals?.total || 0), 0);
+  const totalSales = transactions.reduce((sum, t) => sum + ((t as any).totals?.total || 0), 0);
   const transactionCount = transactions.length;
   const averageTicket = transactionCount > 0 ? totalSales / transactionCount : 0;
 
   // Calculate tip percentage
-  const totalTips = transactions.reduce((sum, t) => sum + (t.payment?.tipAmount || 0), 0);
+  const totalTips = transactions.reduce((sum, t) => sum + ((t as any).payment?.tipAmount || 0), 0);
   const tipPercentage = totalSales > 0 ? (totalTips / totalSales) * 100 : 0;
 
   // TODO: Calculate upsell success when menu items are tracked
