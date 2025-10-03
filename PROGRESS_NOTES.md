@@ -80,14 +80,21 @@
    - Updates user streak on activity
    - Complete error handling (points failure doesn't block task)
 
+7. **Leaderboard UI** ✅
+   - Full leaderboard page at `/leaderboard`
+   - 4 time periods (Daily, Weekly, Monthly, All-Time)
+   - Real-time data from API
+   - Top 3 with special icons/backgrounds
+   - User rank card
+   - Shows points, level, streak
+
 ### 🔜 Still TODO for Phase 5:
-1. **UI Components:**
-   - Leaderboard page component
-   - Badge collection display
-   - Points/level progress bars
-   - Streak indicators
-   - Badge unlock notifications
+1. **UI Components (Optional Polish):**
+   - Badge collection page
+   - Badge unlock notifications/toasts
    - Level-up animations
+   - Points progress bars in dashboards
+   - Streak indicators in header
 
 ## 📁 FILE STRUCTURE
 
@@ -162,13 +169,18 @@
 
 ## 🎯 NEXT STEPS WHEN YOU RETURN
 
-1. Create `src/lib/badges.ts` with badge checking logic
-2. Create `/api/v2/leaderboards/route.ts` for leaderboard queries
-3. Create `/api/v2/badges/route.ts` for badge management
-4. Update `/api/v2/tasks/[id]/route.ts` to award points on completion
-5. Test points awarding and badge unlocking
-6. Build leaderboard UI component
-7. Commit and deploy Phase 5
+### Optional Enhancements:
+1. **Badge Collection Page** - Display unlocked badges with progress
+2. **Notifications** - Real-time toasts for badge unlocks and level-ups
+3. **Progress Bars** - Points/level progress in dashboards
+4. **Initialize Default Badges** - Call `initializeDefaultBadges()` on first run
+
+### Phase 6+ (Future Features):
+1. **Task Management UI** - Build workflow/task creation interfaces
+2. **Workflow Builder** - Visual workflow template builder for managers
+3. **Analytics Enhancements** - More detailed charts and insights
+4. **Mobile App** - React Native version
+5. **Advanced Gamification** - Teams, challenges, seasonal events
 
 ## 💡 IMPORTANT NOTES
 
