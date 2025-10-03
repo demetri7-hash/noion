@@ -6,7 +6,7 @@
  */
 
 import React, { Suspense, useState, useEffect } from 'react';
-import DashboardLayout from '../../../components/layout/DashboardLayout';
+import MainLayout from '../../../components/layout/MainLayout';
 import ManagerDashboard from '../../../components/analytics/ManagerDashboard';
 
 function ManagerDashboardContent() {
@@ -24,17 +24,17 @@ function ManagerDashboardContent() {
 
   if (!token) {
     return (
-      <DashboardLayout>
+      <MainLayout>
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
           <p className="text-yellow-800 font-semibold">Authentication Required</p>
           <p className="text-yellow-600 text-sm mt-1">Please log in to view your dashboard.</p>
         </div>
-      </DashboardLayout>
+      </MainLayout>
     );
   }
 
   return (
-    <DashboardLayout>
+    <MainLayout>
       <div className="space-y-4">
         {/* Date Range Selector */}
         <div className="bg-white rounded-lg shadow p-4">
@@ -91,7 +91,7 @@ function ManagerDashboardContent() {
         {/* Dashboard */}
         <ManagerDashboard token={token} dateRange={dateRange} />
       </div>
-    </DashboardLayout>
+    </MainLayout>
   );
 }
 
