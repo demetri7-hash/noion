@@ -435,7 +435,7 @@ class ToastIntegrationService {
                     webhookReceived: false,
                     rawPOSData: toastTransaction
                 },
-                transactionDate: new Date(toastTransaction.businessDate)
+                transactionDate: new Date(toastTransaction.openedDate) // Use openedDate instead of businessDate
             };
         }
         catch (error) {
