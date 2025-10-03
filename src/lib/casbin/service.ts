@@ -6,7 +6,6 @@
  */
 
 import { newEnforcer, Enforcer } from 'casbin';
-import path from 'path';
 import { getAllPolicies } from './policies';
 import { UserRole } from '@/models/Restaurant';
 
@@ -57,11 +56,26 @@ class CasbinService {
    */
   private async _doInitialize(): Promise<Enforcer> {
     try {
-      // Path to model.conf
-      const modelPath = path.join(process.cwd(), 'src', 'lib', 'casbin', 'model.conf');
+      // Inline model definition (works better in serverless environments like Vercel)
+      const model = `
+[request_definition]
+r = sub, obj, act
 
-      // Create enforcer with model (no policy file, we'll add programmatically)
-      const enforcer = await newEnforcer(modelPath);
+[policy_definition]
+p = sub, obj, act
+
+[role_definition]
+g = _, _
+
+[policy_effect]
+e = some(where (p.eft == allow))
+
+[matchers]
+m = g(r.sub, p.sub) && r.obj == p.obj && r.act == p.act
+`;
+
+      // Create enforcer with inline model
+      const enforcer = await newEnforcer(model);
 
       // Load policies
       const { policies, roleInheritance } = getAllPolicies();
