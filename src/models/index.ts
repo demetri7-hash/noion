@@ -3,12 +3,16 @@ export { default as Restaurant } from './Restaurant';
 export { default as Insight } from './Insight';
 export { default as Transaction } from './Transaction';
 export { ConfigMapping } from './ConfigMapping';
+export { default as Message } from './Message';
+export { default as Conversation } from './Conversation';
 
 // Export types and enums
 export type { IRestaurant } from './Restaurant';
 export type { IInsight } from './Insight';
 export type { ITransaction } from './Transaction';
 export type { IConfigMapping } from './ConfigMapping';
+export type { IMessage } from './Message';
+export type { IConversation } from './Conversation';
 
 export { RestaurantType, POSSystemType, SubscriptionTier, RestaurantStatus, UserRole } from './Restaurant';
 export { InsightType, InsightCategory, InsightPriority, InsightStatus } from './Insight';
