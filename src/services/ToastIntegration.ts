@@ -369,11 +369,11 @@ export class ToastIntegrationService {
   /**
    * Connect a restaurant to Toast POS system
    */
-  async connectRestaurant(restaurantId: string, credentials: IToastCredentials): Promise<boolean> {
+  async connectRestaurant(restaurantId: string, credentials: IToastCredentials): Promise<{ success: boolean; ordersImported: number }> {
     try {
       // Authenticate with Toast
       const authResponse = await this.authenticateRestaurant(credentials);
-      
+
       // Find the restaurant in our database
       const restaurant = await Restaurant.findById(restaurantId);
       if (!restaurant) {
@@ -382,7 +382,7 @@ export class ToastIntegrationService {
 
       // Encrypt and store credentials
       const encryptedAccessToken = EncryptionUtil.encrypt(
-        authResponse.token.accessToken, 
+        authResponse.token.accessToken,
         this.encryptionKey
       );
 
@@ -399,10 +399,10 @@ export class ToastIntegrationService {
 
       await restaurant.save();
 
-      // Perform initial data sync
-      await this.performInitialSync(restaurant._id as string, authResponse.token.accessToken);
+      // Perform initial data sync and get imported count
+      const ordersImported = await this.performInitialSync(restaurant._id as string, authResponse.token.accessToken);
 
-      return true;
+      return { success: true, ordersImported };
     } catch (error) {
       console.error('Failed to connect restaurant to Toast:', error);
       throw error;
@@ -703,8 +703,9 @@ export class ToastIntegrationService {
 
   /**
    * Perform initial sync of historical data
+   * Returns the number of transactions imported
    */
-  async performInitialSync(restaurantId: string, accessToken: string): Promise<void> {
+  async performInitialSync(restaurantId: string, accessToken: string): Promise<number> {
     try {
       console.log(`Starting initial sync for restaurant ${restaurantId}`);
 
@@ -719,9 +720,10 @@ export class ToastIntegrationService {
       console.log(`Fetched ${toastTransactions.length} transactions from Toast`);
 
       // Import transactions
-      await this.importTransactions(restaurantId, toastTransactions);
+      const importedCount = await this.importTransactions(restaurantId, toastTransactions);
 
       console.log(`Initial sync completed for restaurant ${restaurantId}`);
+      return importedCount;
     } catch (error) {
       console.error('Initial sync failed:', error);
       throw error;
@@ -730,10 +732,12 @@ export class ToastIntegrationService {
 
   /**
    * Import transactions into our database
+   * Returns the number of transactions successfully imported
    */
-  async importTransactions(restaurantId: string, toastTransactions: IToastTransaction[]): Promise<void> {
+  async importTransactions(restaurantId: string, toastTransactions: IToastTransaction[]): Promise<number> {
     const { Transaction } = await import('../models');
-    
+    let importedCount = 0;
+
     for (const toastTransaction of toastTransactions) {
       try {
         // Check if transaction already exists
@@ -750,12 +754,16 @@ export class ToastIntegrationService {
         const normalizedData = this.normalizeTransaction(toastTransaction, restaurantId);
         const transaction = new Transaction(normalizedData);
         await transaction.save();
-        
+        importedCount++;
+
       } catch (error) {
         console.error(`Failed to import transaction ${toastTransaction.guid}:`, error);
         // Continue with next transaction
       }
     }
+
+    console.log(`Imported ${importedCount} new transactions (${toastTransactions.length - importedCount} duplicates skipped)`);
+    return importedCount;
   }
 
   /**

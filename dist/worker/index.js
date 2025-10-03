@@ -23,6 +23,7 @@ const SyncJob_1 = __importDefault(require("../models/SyncJob"));
 const Restaurant_1 = __importDefault(require("../models/Restaurant"));
 const ToastIntegration_1 = require("../services/ToastIntegration");
 const EmailService_1 = require("../services/EmailService");
+const InsightGenerator_1 = require("../services/InsightGenerator");
 const emailService = new EmailService_1.EmailService();
 const QUEUE_NAME = 'pos-sync';
 /**
@@ -55,12 +56,24 @@ async function processSyncJob(job) {
             case 'toast': {
                 const toastService = new ToastIntegration_1.ToastIntegration();
                 // Connect and sync data
-                await toastService.connectRestaurant(restaurantId, {
+                const syncResult = await toastService.connectRestaurant(restaurantId, {
                     clientId: credentials.clientId,
                     clientSecret: credentials.clientSecret,
                     locationGuid: credentials.locationGuid || ''
                 });
                 console.log(`✅ Toast sync completed for restaurant ${restaurantId}`);
+                console.log(`📊 Imported ${syncResult.ordersImported} orders`);
+                // Update sync job progress with actual imported count
+                syncJob.progress.ordersProcessed = syncResult.ordersImported;
+                await syncJob.save();
+                // Generate AI insights from imported transactions
+                console.log(`🤖 Generating AI insights for restaurant ${restaurantId}...`);
+                const insightGenerator = new InsightGenerator_1.InsightGenerator();
+                const endDate = new Date();
+                const startDate = new Date();
+                startDate.setDate(startDate.getDate() - 30); // Last 30 days
+                await insightGenerator.generateInsights(restaurantId, startDate, endDate);
+                console.log(`✅ Insights generated successfully`);
                 // Mark restaurant as connected
                 restaurant.posConfig.isConnected = true;
                 await restaurant.save();

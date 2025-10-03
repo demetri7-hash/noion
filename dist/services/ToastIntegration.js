@@ -218,9 +218,9 @@ class ToastIntegrationService {
                 locationId: credentials.locationGuid
             };
             await restaurant.save();
-            // Perform initial data sync
-            await this.performInitialSync(restaurant._id, authResponse.token.accessToken);
-            return true;
+            // Perform initial data sync and get imported count
+            const ordersImported = await this.performInitialSync(restaurant._id, authResponse.token.accessToken);
+            return { success: true, ordersImported };
         }
         catch (error) {
             console.error('Failed to connect restaurant to Toast:', error);
@@ -482,6 +482,7 @@ class ToastIntegrationService {
     }
     /**
      * Perform initial sync of historical data
+     * Returns the number of transactions imported
      */
     async performInitialSync(restaurantId, accessToken) {
         try {
@@ -494,8 +495,9 @@ class ToastIntegrationService {
             const toastTransactions = await this.fetchTransactions(restaurantId, startDate, endDate);
             console.log(`Fetched ${toastTransactions.length} transactions from Toast`);
             // Import transactions
-            await this.importTransactions(restaurantId, toastTransactions);
+            const importedCount = await this.importTransactions(restaurantId, toastTransactions);
             console.log(`Initial sync completed for restaurant ${restaurantId}`);
+            return importedCount;
         }
         catch (error) {
             console.error('Initial sync failed:', error);
@@ -504,9 +506,11 @@ class ToastIntegrationService {
     }
     /**
      * Import transactions into our database
+     * Returns the number of transactions successfully imported
      */
     async importTransactions(restaurantId, toastTransactions) {
         const { Transaction } = await Promise.resolve().then(() => __importStar(require('../models')));
+        let importedCount = 0;
         for (const toastTransaction of toastTransactions) {
             try {
                 // Check if transaction already exists
@@ -521,12 +525,15 @@ class ToastIntegrationService {
                 const normalizedData = this.normalizeTransaction(toastTransaction, restaurantId);
                 const transaction = new Transaction(normalizedData);
                 await transaction.save();
+                importedCount++;
             }
             catch (error) {
                 console.error(`Failed to import transaction ${toastTransaction.guid}:`, error);
                 // Continue with next transaction
             }
         }
+        console.log(`Imported ${importedCount} new transactions (${toastTransactions.length - importedCount} duplicates skipped)`);
+        return importedCount;
     }
     /**
      * Handle webhook from Toast

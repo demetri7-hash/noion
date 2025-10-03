@@ -17,6 +17,7 @@ import SyncJob from '../models/SyncJob';
 import Restaurant from '../models/Restaurant';
 import { ToastIntegration } from '../services/ToastIntegration';
 import { EmailService } from '../services/EmailService';
+import { InsightGenerator } from '../services/InsightGenerator';
 import { SyncJobData } from '../lib/queue';
 
 const emailService = new EmailService();
@@ -61,13 +62,27 @@ async function processSyncJob(job: Job<SyncJobData>) {
         const toastService = new ToastIntegration();
 
         // Connect and sync data
-        await toastService.connectRestaurant(restaurantId, {
+        const syncResult = await toastService.connectRestaurant(restaurantId, {
           clientId: credentials.clientId,
           clientSecret: credentials.clientSecret,
           locationGuid: credentials.locationGuid || ''
         });
 
         console.log(`✅ Toast sync completed for restaurant ${restaurantId}`);
+        console.log(`📊 Imported ${syncResult.ordersImported} orders`);
+
+        // Update sync job progress with actual imported count
+        syncJob.progress.ordersProcessed = syncResult.ordersImported;
+        await syncJob.save();
+
+        // Generate AI insights from imported transactions
+        console.log(`🤖 Generating AI insights for restaurant ${restaurantId}...`);
+        const insightGenerator = new InsightGenerator();
+        const endDate = new Date();
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - 30); // Last 30 days
+        await insightGenerator.generateInsights(restaurantId, startDate, endDate);
+        console.log(`✅ Insights generated successfully`);
 
         // Mark restaurant as connected
         restaurant.posConfig.isConnected = true;
