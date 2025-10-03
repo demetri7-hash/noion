@@ -39,6 +39,14 @@ export enum RestaurantStatus {
   PENDING_SETUP = 'pending_setup'
 }
 
+// Enum for user roles (Employee Management System)
+export enum UserRole {
+  OWNER = 'owner',
+  ADMIN = 'admin',
+  MANAGER = 'manager',
+  EMPLOYEE = 'employee'
+}
+
 // Interface for owner information
 export interface IOwnerInfo {
   firstName: string;
@@ -47,12 +55,27 @@ export interface IOwnerInfo {
   phone: string;
   title?: string;
   password: string;
-  role?: string;
+  role?: UserRole | string; // Support both new enum and legacy string
   passwordResetToken?: string;
   passwordResetExpires?: Date;
   failedLoginAttempts?: number;
   lockoutUntil?: Date;
   lastLoginAt?: Date;
+
+  // Employee Management System fields
+  employeeId?: string;           // For non-owner users
+  hireDate?: Date;                // Employment start date
+  isActive?: boolean;             // Active/inactive status
+
+  // Gamification fields
+  points?: number;                // Total points earned
+  level?: number;                 // Current level (1-10)
+  streak?: number;                // Current streak (days)
+  lastActivityDate?: Date;        // Last activity for streak tracking
+
+  // Permissions cache (for performance)
+  cachedPermissions?: string[];   // Cached from Casbin
+  permissionsCachedAt?: Date;     // When permissions were last cached
 }
 
 // Interface for restaurant location
@@ -194,12 +217,31 @@ const RestaurantSchema = new Schema<IRestaurant>({
     phone: { type: String, required: true },
     title: { type: String, trim: true },
     password: { type: String, required: true },
-    role: { type: String, default: 'restaurant_owner' },
+    role: {
+      type: String,
+      enum: [...Object.values(UserRole), 'restaurant_owner', 'restaurant_manager', 'restaurant_staff'], // Support legacy and new roles
+      default: UserRole.OWNER
+    },
     passwordResetToken: { type: String },
     passwordResetExpires: { type: Date },
     failedLoginAttempts: { type: Number, default: 0 },
     lockoutUntil: { type: Date },
-    lastLoginAt: { type: Date }
+    lastLoginAt: { type: Date },
+
+    // Employee Management System fields
+    employeeId: { type: String },
+    hireDate: { type: Date },
+    isActive: { type: Boolean, default: true },
+
+    // Gamification fields
+    points: { type: Number, default: 0, min: 0 },
+    level: { type: Number, default: 1, min: 1, max: 10 },
+    streak: { type: Number, default: 0, min: 0 },
+    lastActivityDate: { type: Date },
+
+    // Permissions cache
+    cachedPermissions: [{ type: String }],
+    permissionsCachedAt: { type: Date }
   },
   
   // Restaurant details

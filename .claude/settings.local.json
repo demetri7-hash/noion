@@ -39,7 +39,9 @@
       "Bash(git reflog:*)",
       "Bash(git gc:*)",
       "Bash(unzip:*)",
-      "WebFetch(domain:toastintegrations.redoc.ly)"
+      "WebFetch(domain:toastintegrations.redoc.ly)",
+      "Read(//Users/demetrigregorakis/Desktop/HUMAN ANALYTICS/NEW TO ADD TO GIT/**)",
+      "Bash(git checkout:*)"
     ],
     "deny": [],
     "ask": []

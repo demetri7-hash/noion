@@ -10,7 +10,7 @@ export type { IInsight } from './Insight';
 export type { ITransaction } from './Transaction';
 export type { IConfigMapping } from './ConfigMapping';
 
-export { RestaurantType, POSSystemType, SubscriptionTier, RestaurantStatus } from './Restaurant';
+export { RestaurantType, POSSystemType, SubscriptionTier, RestaurantStatus, UserRole } from './Restaurant';
 export { InsightType, InsightCategory, InsightPriority, InsightStatus } from './Insight';
 export { TransactionStatus, PaymentMethod, OrderType } from './Transaction';
 export { ConfigMappingType } from './ConfigMapping';
