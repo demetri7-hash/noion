@@ -215,8 +215,9 @@ export async function awardPoints(params: {
   });
 
   // Check for level up
-  const newLevel = calculateLevel(restaurant.owner.points);
-  if (newLevel > restaurant.owner.level) {
+  const newLevel = calculateLevel(restaurant.owner.points || 0);
+  const currentLevel = restaurant.owner.level || 1;
+  if (newLevel > currentLevel) {
     await Restaurant.findByIdAndUpdate(restaurantId, {
       $set: { 'owner.level': newLevel }
     });
