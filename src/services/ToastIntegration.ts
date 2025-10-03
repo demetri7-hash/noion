@@ -645,7 +645,7 @@ export class ToastIntegrationService {
           isRepeatCustomer: false, // Will be determined by customer analysis
           isDuringPeakHours: false, // Will be calculated in pre-save
           dayOfWeek: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][new Date(toastTransaction.openedDate).getDay()],
-          hourOfDay: new Date(toastTransaction.openedDate).getHours(),
+          hourOfDay: new Date(toastTransaction.openedDate).getUTCHours(),
           anomalies: []
         },
         integration: {

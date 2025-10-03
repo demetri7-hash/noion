@@ -184,7 +184,7 @@ export async function GET(
     // Fetch insights
     const insights = await Insight.find({
       restaurantId: restaurantId,
-      status: { $in: ['new', 'viewed'] }
+      status: { $in: ['generated', 'sent', 'viewed'] }
     })
       .sort({ createdAt: -1 })
       .limit(10);
