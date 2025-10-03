@@ -19,17 +19,17 @@ interface IDashboardMetrics {
   totalRevenue: {
     current: number;
     previous: number;
-    change: number;
+    change: number | null;
   };
   customerCount: {
     current: number;
     previous: number;
-    change: number;
+    change: number | null;
   };
   averageTicket: {
     current: number;
     previous: number;
-    change: number;
+    change: number | null;
   };
   peakHours: {
     start: string;
@@ -127,7 +127,8 @@ export default function AnalyticsDashboard() {
     }).format(amount);
   };
 
-  const getChangeIcon = (change: number) => {
+  const getChangeIcon = (change: number | null) => {
+    if (change === null) return null;
     return change >= 0 ? (
       <ChevronUp className="w-4 h-4 text-green-500" />
     ) : (
@@ -135,7 +136,8 @@ export default function AnalyticsDashboard() {
     );
   };
 
-  const getChangeColor = (change: number): string => {
+  const getChangeColor = (change: number | null): string => {
+    if (change === null) return 'text-gray-500';
     return change >= 0 ? 'text-green-600' : 'text-red-600';
   };
 
@@ -232,11 +234,17 @@ export default function AnalyticsDashboard() {
                     {formatCurrency(metrics.totalRevenue.current)}
                   </p>
                   <div className="flex items-center mt-1">
-                    {getChangeIcon(metrics.totalRevenue.change)}
-                    <span className={`text-sm font-medium ${getChangeColor(metrics.totalRevenue.change)}`}>
-                      {Math.abs(metrics.totalRevenue.change).toFixed(1)}%
-                    </span>
-                    <span className="text-sm text-gray-500 ml-1">vs last period</span>
+                    {metrics.totalRevenue.change !== null ? (
+                      <>
+                        {getChangeIcon(metrics.totalRevenue.change)}
+                        <span className={`text-sm font-medium ${getChangeColor(metrics.totalRevenue.change)}`}>
+                          {Math.abs(metrics.totalRevenue.change).toFixed(1)}%
+                        </span>
+                        <span className="text-sm text-gray-500 ml-1">vs last period</span>
+                      </>
+                    ) : (
+                      <span className="text-sm text-gray-500">Insufficient historical data</span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -254,11 +262,17 @@ export default function AnalyticsDashboard() {
                     {metrics.customerCount.current.toLocaleString()}
                   </p>
                   <div className="flex items-center mt-1">
-                    {getChangeIcon(metrics.customerCount.change)}
-                    <span className={`text-sm font-medium ${getChangeColor(metrics.customerCount.change)}`}>
-                      {Math.abs(metrics.customerCount.change).toFixed(1)}%
-                    </span>
-                    <span className="text-sm text-gray-500 ml-1">vs last period</span>
+                    {metrics.customerCount.change !== null ? (
+                      <>
+                        {getChangeIcon(metrics.customerCount.change)}
+                        <span className={`text-sm font-medium ${getChangeColor(metrics.customerCount.change)}`}>
+                          {Math.abs(metrics.customerCount.change).toFixed(1)}%
+                        </span>
+                        <span className="text-sm text-gray-500 ml-1">vs last period</span>
+                      </>
+                    ) : (
+                      <span className="text-sm text-gray-500">Insufficient historical data</span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -276,11 +290,17 @@ export default function AnalyticsDashboard() {
                     {formatCurrency(metrics.averageTicket.current)}
                   </p>
                   <div className="flex items-center mt-1">
-                    {getChangeIcon(metrics.averageTicket.change)}
-                    <span className={`text-sm font-medium ${getChangeColor(metrics.averageTicket.change)}`}>
-                      {Math.abs(metrics.averageTicket.change).toFixed(1)}%
-                    </span>
-                    <span className="text-sm text-gray-500 ml-1">vs last period</span>
+                    {metrics.averageTicket.change !== null ? (
+                      <>
+                        {getChangeIcon(metrics.averageTicket.change)}
+                        <span className={`text-sm font-medium ${getChangeColor(metrics.averageTicket.change)}`}>
+                          {Math.abs(metrics.averageTicket.change).toFixed(1)}%
+                        </span>
+                        <span className="text-sm text-gray-500 ml-1">vs last period</span>
+                      </>
+                    ) : (
+                      <span className="text-sm text-gray-500">Insufficient historical data</span>
+                    )}
                   </div>
                 </div>
               </div>

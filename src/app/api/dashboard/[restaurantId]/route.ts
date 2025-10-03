@@ -146,22 +146,25 @@ export async function GET(
     const previousCustomers = previousTransactions.length;
     const previousAvgTicket = previousCustomers > 0 ? previousRevenue / previousCustomers : 0;
 
-    // Calculate changes
-    const revenueChange = previousRevenue > 0
-      ? ((currentRevenue - previousRevenue) / previousRevenue) * 100
-      : 0;
-    const customerChange = previousCustomers > 0
-      ? ((currentCustomers - previousCustomers) / previousCustomers) * 100
-      : 0;
-    const avgTicketChange = previousAvgTicket > 0
-      ? ((currentAvgTicket - previousAvgTicket) / previousAvgTicket) * 100
-      : 0;
+    // Calculate changes (only if sufficient historical data)
+    // If previous period has less than 20% of current period data, comparisons are misleading
+    const hasValidComparison = previousCustomers >= currentCustomers * 0.2;
 
-    // Calculate peak hours
+    const revenueChange = hasValidComparison && previousRevenue > 0
+      ? ((currentRevenue - previousRevenue) / previousRevenue) * 100
+      : null;
+    const customerChange = hasValidComparison && previousCustomers > 0
+      ? ((currentCustomers - previousCustomers) / previousCustomers) * 100
+      : null;
+    const avgTicketChange = hasValidComparison && previousAvgTicket > 0
+      ? ((currentAvgTicket - previousAvgTicket) / previousAvgTicket) * 100
+      : null;
+
+    // Calculate peak hours using stored UTC hourOfDay
     const hourlyRevenue: { [hour: number]: number } = {};
     currentTransactions.forEach(t => {
-      if (t.timing?.orderStartedAt) {
-        const hour = new Date(t.timing.orderStartedAt).getHours();
+      if (t.analytics?.hourOfDay !== undefined) {
+        const hour = t.analytics.hourOfDay;
         hourlyRevenue[hour] = (hourlyRevenue[hour] || 0) + (t.totalAmount || 0);
       }
     });
