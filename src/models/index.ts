@@ -9,6 +9,9 @@ export { default as WorkflowTemplate } from './WorkflowTemplate';
 export { default as Workflow } from './Workflow';
 export { default as Task } from './Task';
 export { default as AuditLog } from './AuditLog';
+export { default as PointsHistory } from './PointsHistory';
+export { default as Badge } from './Badge';
+export { default as UserBadge } from './UserBadge';
 
 // Export types and enums
 export type { IRestaurant } from './Restaurant';
@@ -21,6 +24,9 @@ export type { IWorkflowTemplate } from './WorkflowTemplate';
 export type { IWorkflow } from './Workflow';
 export type { ITask } from './Task';
 export type { IAuditLog } from './AuditLog';
+export type { IPointsHistory } from './PointsHistory';
+export type { IBadge } from './Badge';
+export type { IUserBadge } from './UserBadge';
 
 export { RestaurantType, POSSystemType, SubscriptionTier, RestaurantStatus, UserRole } from './Restaurant';
 export { InsightType, InsightCategory, InsightPriority, InsightStatus } from './Insight';
