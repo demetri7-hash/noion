@@ -10,11 +10,13 @@ export default function Home() {
   const router = useRouter();
 
   useEffect(() => {
-    // Check if user is logged in
-    const token = localStorage.getItem('authToken');
-    if (token) {
-      // Redirect to dashboard if already logged in
-      router.push('/dashboard');
+    // Check if user is logged in (client-side only)
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('authToken');
+      if (token) {
+        // Redirect to dashboard if already logged in
+        router.push('/dashboard');
+      }
     }
   }, [router]);
 
