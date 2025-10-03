@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
-import { Transaction } from '@/models';
-import { Insight } from '@/models';
+import { Transaction, Insight, Restaurant } from '@/models';
 
 /**
  * GET /api/dashboard/[restaurantId]
@@ -96,6 +95,10 @@ export async function GET(
       });
     }
 
+    // Fetch restaurant to get timezone
+    const restaurant = await Restaurant.findById(restaurantId);
+    const timezone = restaurant?.analyticsSettings?.timezone || 'America/Los_Angeles';
+
     const searchParams = req.nextUrl.searchParams;
     const timeRange = searchParams.get('timeRange') || '30d';
 
@@ -178,9 +181,26 @@ export async function GET(
       }
     });
 
-    const formatHour = (hour: number) => {
-      const period = hour >= 12 ? 'PM' : 'AM';
-      const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+    // Helper function to convert UTC hour to restaurant's local timezone
+    const convertUTCToLocal = (utcHour: number): number => {
+      // Create a date object in UTC
+      const now = new Date();
+      const utcDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), utcHour, 0, 0));
+
+      // Convert to restaurant timezone using Intl
+      const localTime = new Intl.DateTimeFormat('en-US', {
+        hour: 'numeric',
+        hour12: false,
+        timeZone: timezone
+      }).format(utcDate);
+
+      return parseInt(localTime);
+    };
+
+    const formatHour = (utcHour: number) => {
+      const localHour = convertUTCToLocal(utcHour);
+      const period = localHour >= 12 ? 'PM' : 'AM';
+      const displayHour = localHour > 12 ? localHour - 12 : localHour === 0 ? 12 : localHour;
       return `${displayHour}:00 ${period}`;
     };
 

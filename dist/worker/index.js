@@ -22,6 +22,7 @@ const mongodb_1 = __importDefault(require("../lib/mongodb"));
 const SyncJob_1 = __importDefault(require("../models/SyncJob"));
 const Restaurant_1 = __importDefault(require("../models/Restaurant"));
 const ToastIntegration_1 = require("../services/ToastIntegration");
+const ToastConfigService_1 = require("../services/ToastConfigService");
 const EmailService_1 = require("../services/EmailService");
 const InsightGenerator_1 = require("../services/InsightGenerator");
 const emailService = new EmailService_1.EmailService();
@@ -66,6 +67,11 @@ async function processSyncJob(job) {
                 // Update sync job progress with actual imported count
                 syncJob.progress.ordersProcessed = syncResult.ordersImported;
                 await syncJob.save();
+                // Fetch restaurant configuration (timezone, service areas, etc.)
+                console.log(`🔧 Fetching restaurant configuration...`);
+                const configService = new ToastConfigService_1.ToastConfigService();
+                await configService.fetchAllConfig(restaurantId);
+                console.log(`✅ Configuration fetched and cached`);
                 // Generate AI insights from imported transactions
                 console.log(`🤖 Generating AI insights for restaurant ${restaurantId}...`);
                 const insightGenerator = new InsightGenerator_1.InsightGenerator();

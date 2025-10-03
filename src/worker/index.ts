@@ -16,6 +16,7 @@ import connectDB from '../lib/mongodb';
 import SyncJob from '../models/SyncJob';
 import Restaurant from '../models/Restaurant';
 import { ToastIntegration } from '../services/ToastIntegration';
+import { ToastConfigService } from '../services/ToastConfigService';
 import { EmailService } from '../services/EmailService';
 import { InsightGenerator } from '../services/InsightGenerator';
 import { SyncJobData } from '../lib/queue';
@@ -74,6 +75,12 @@ async function processSyncJob(job: Job<SyncJobData>) {
         // Update sync job progress with actual imported count
         syncJob.progress.ordersProcessed = syncResult.ordersImported;
         await syncJob.save();
+
+        // Fetch restaurant configuration (timezone, service areas, etc.)
+        console.log(`🔧 Fetching restaurant configuration...`);
+        const configService = new ToastConfigService();
+        await configService.fetchAllConfig(restaurantId);
+        console.log(`✅ Configuration fetched and cached`);
 
         // Generate AI insights from imported transactions
         console.log(`🤖 Generating AI insights for restaurant ${restaurantId}...`);

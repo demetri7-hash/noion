@@ -37,7 +37,9 @@
       "Bash(git log:*)",
       "Bash(bfg:*)",
       "Bash(git reflog:*)",
-      "Bash(git gc:*)"
+      "Bash(git gc:*)",
+      "Bash(unzip:*)",
+      "WebFetch(domain:toastintegrations.redoc.ly)"
     ],
     "deny": [],
     "ask": []

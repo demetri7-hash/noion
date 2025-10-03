@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.OrderType = exports.PaymentMethod = exports.TransactionStatus = exports.InsightStatus = exports.InsightPriority = exports.InsightCategory = exports.InsightType = exports.RestaurantStatus = exports.SubscriptionTier = exports.POSSystemType = exports.RestaurantType = exports.Transaction = exports.Insight = exports.Restaurant = void 0;
+exports.ConfigMappingType = exports.OrderType = exports.PaymentMethod = exports.TransactionStatus = exports.InsightStatus = exports.InsightPriority = exports.InsightCategory = exports.InsightType = exports.RestaurantStatus = exports.SubscriptionTier = exports.POSSystemType = exports.RestaurantType = exports.ConfigMapping = exports.Transaction = exports.Insight = exports.Restaurant = void 0;
 // Export all database models
 var Restaurant_1 = require("./Restaurant");
 Object.defineProperty(exports, "Restaurant", { enumerable: true, get: function () { return __importDefault(Restaurant_1).default; } });
@@ -11,6 +11,8 @@ var Insight_1 = require("./Insight");
 Object.defineProperty(exports, "Insight", { enumerable: true, get: function () { return __importDefault(Insight_1).default; } });
 var Transaction_1 = require("./Transaction");
 Object.defineProperty(exports, "Transaction", { enumerable: true, get: function () { return __importDefault(Transaction_1).default; } });
+var ConfigMapping_1 = require("./ConfigMapping");
+Object.defineProperty(exports, "ConfigMapping", { enumerable: true, get: function () { return ConfigMapping_1.ConfigMapping; } });
 var Restaurant_2 = require("./Restaurant");
 Object.defineProperty(exports, "RestaurantType", { enumerable: true, get: function () { return Restaurant_2.RestaurantType; } });
 Object.defineProperty(exports, "POSSystemType", { enumerable: true, get: function () { return Restaurant_2.POSSystemType; } });
@@ -25,3 +27,5 @@ var Transaction_2 = require("./Transaction");
 Object.defineProperty(exports, "TransactionStatus", { enumerable: true, get: function () { return Transaction_2.TransactionStatus; } });
 Object.defineProperty(exports, "PaymentMethod", { enumerable: true, get: function () { return Transaction_2.PaymentMethod; } });
 Object.defineProperty(exports, "OrderType", { enumerable: true, get: function () { return Transaction_2.OrderType; } });
+var ConfigMapping_2 = require("./ConfigMapping");
+Object.defineProperty(exports, "ConfigMappingType", { enumerable: true, get: function () { return ConfigMapping_2.ConfigMappingType; } });
