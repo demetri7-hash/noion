@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import MainLayout from '../../components/layout/MainLayout';
 import { CheckSquare, Calendar, Camera, FileSignature, FileText, Clock, AlertCircle, ChevronRight } from 'lucide-react';
+import TaskCompletionModal from '../../components/tasks/TaskCompletionModal';
 
 interface Task {
   _id: string;
@@ -33,6 +34,7 @@ export default function TasksPage() {
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedWorkflow, setSelectedWorkflow] = useState<string | null>(null);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   useEffect(() => {
     loadWorkflows();
@@ -207,7 +209,15 @@ export default function TasksPage() {
                 {selectedWorkflow === workflow._id && (
                   <div className="divide-y divide-gray-200">
                     {workflow.tasks.sort((a, b) => a.order - b.order).map((task) => (
-                      <div key={task._id} className="p-4 hover:bg-gray-50">
+                      <div
+                        key={task._id}
+                        className={`p-4 ${task.status !== 'completed' ? 'hover:bg-gray-50 cursor-pointer' : ''}`}
+                        onClick={() => {
+                          if (task.status !== 'completed') {
+                            setSelectedTask(task);
+                          }
+                        }}
+                      >
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
                             <div className="flex items-center space-x-2">
@@ -216,6 +226,7 @@ export default function TasksPage() {
                                 checked={task.status === 'completed'}
                                 disabled={task.status === 'completed'}
                                 className="h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                                readOnly
                               />
                               <h4 className={`font-medium ${task.status === 'completed' ? 'text-gray-500 line-through' : 'text-gray-900'}`}>
                                 {task.title}
@@ -262,6 +273,18 @@ export default function TasksPage() {
           </div>
         )}
       </div>
+
+      {/* Task Completion Modal */}
+      {selectedTask && (
+        <TaskCompletionModal
+          task={selectedTask}
+          onClose={() => setSelectedTask(null)}
+          onComplete={() => {
+            setSelectedTask(null);
+            loadWorkflows();
+          }}
+        />
+      )}
     </MainLayout>
   );
 }
