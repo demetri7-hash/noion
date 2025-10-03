@@ -139,4 +139,6 @@ ConfigMappingSchema.statics.getMappingsForType = async function(
   return map;
 };
 
-export const ConfigMapping = mongoose.model<IConfigMapping>('ConfigMapping', ConfigMappingSchema);
+// Export the model (handle Next.js hot reload in dev mode)
+export const ConfigMapping = (mongoose.models.ConfigMapping as mongoose.Model<IConfigMapping>) ||
+  mongoose.model<IConfigMapping>('ConfigMapping', ConfigMappingSchema);

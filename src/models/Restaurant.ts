@@ -480,5 +480,6 @@ RestaurantSchema.statics.findByPOSType = function(posType: POSSystemType) {
   return this.find({ 'posConfig.type': posType });
 };
 
-// Export the model
-export default mongoose.model<IRestaurant>('Restaurant', RestaurantSchema);
+// Export the model (handle Next.js hot reload in dev mode)
+export default (mongoose.models.Restaurant as mongoose.Model<IRestaurant>) ||
+  mongoose.model<IRestaurant>('Restaurant', RestaurantSchema);

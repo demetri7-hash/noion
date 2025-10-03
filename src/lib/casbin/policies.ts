@@ -26,6 +26,11 @@ export const roleInheritance = [
 
   // Manager inherits all employee permissions
   [UserRole.MANAGER, UserRole.EMPLOYEE],
+
+  // Legacy role mappings (for backwards compatibility)
+  ['restaurant_owner', UserRole.OWNER],  // Legacy owner = Owner
+  ['restaurant_manager', UserRole.MANAGER],  // Legacy manager = Manager
+  ['restaurant_staff', UserRole.EMPLOYEE],  // Legacy staff = Employee
 ];
 
 /**

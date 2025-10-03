@@ -565,5 +565,6 @@ InsightSchema.statics.getEngagementStats = function(restaurantId?: string) {
   ]);
 };
 
-// Export the model
-export default mongoose.model<IInsight>('Insight', InsightSchema);
+// Export the model (handle Next.js hot reload in dev mode)
+export default (mongoose.models.Insight as mongoose.Model<IInsight>) ||
+  mongoose.model<IInsight>('Insight', InsightSchema);

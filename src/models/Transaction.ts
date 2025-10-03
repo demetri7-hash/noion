@@ -672,5 +672,6 @@ TransactionSchema.statics.findUpsellOpportunities = function(restaurantId: strin
   .limit(limit);
 };
 
-// Export the model
-export default mongoose.model<ITransaction>('Transaction', TransactionSchema);
+// Export the model (handle Next.js hot reload in dev mode)
+export default (mongoose.models.Transaction as mongoose.Model<ITransaction>) ||
+  mongoose.model<ITransaction>('Transaction', TransactionSchema);
