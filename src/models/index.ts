@@ -5,6 +5,10 @@ export { default as Transaction } from './Transaction';
 export { ConfigMapping } from './ConfigMapping';
 export { default as Message } from './Message';
 export { default as Conversation } from './Conversation';
+export { default as WorkflowTemplate } from './WorkflowTemplate';
+export { default as Workflow } from './Workflow';
+export { default as Task } from './Task';
+export { default as AuditLog } from './AuditLog';
 
 // Export types and enums
 export type { IRestaurant } from './Restaurant';
@@ -13,6 +17,10 @@ export type { ITransaction } from './Transaction';
 export type { IConfigMapping } from './ConfigMapping';
 export type { IMessage } from './Message';
 export type { IConversation } from './Conversation';
+export type { IWorkflowTemplate } from './WorkflowTemplate';
+export type { IWorkflow } from './Workflow';
+export type { ITask } from './Task';
+export type { IAuditLog } from './AuditLog';
 
 export { RestaurantType, POSSystemType, SubscriptionTier, RestaurantStatus, UserRole } from './Restaurant';
 export { InsightType, InsightCategory, InsightPriority, InsightStatus } from './Insight';

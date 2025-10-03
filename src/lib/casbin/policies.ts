@@ -55,6 +55,8 @@ export const policies = [
   [UserRole.EMPLOYEE, 'tasks:own', 'update'],
 
   // Chat (own messages)
+  [UserRole.EMPLOYEE, 'chat', 'read'],
+  [UserRole.EMPLOYEE, 'chat', 'write'],
   [UserRole.EMPLOYEE, 'chat:messages', 'read'],
   [UserRole.EMPLOYEE, 'chat:messages', 'create'],
   [UserRole.EMPLOYEE, 'chat:channels', 'read'],
