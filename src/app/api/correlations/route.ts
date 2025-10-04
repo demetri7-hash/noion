@@ -29,16 +29,19 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: {
-        correlations: correlations.map(c => ({
-          id: c._id,
-          type: c.type,
-          pattern: c.pattern,
-          factor: c.factor,
-          outcome: c.outcome,
-          statistics: c.statistics,
-          createdAt: c.createdAt,
-          validatedAt: c.validatedAt
-        }))
+        correlations: correlations.map(c => {
+          const plain = c.toObject();
+          return {
+            id: plain._id,
+            type: plain.type,
+            pattern: plain.pattern,
+            factor: plain.factor,
+            outcome: plain.outcome,
+            statistics: plain.statistics,
+            createdAt: plain.createdAt,
+            validatedAt: plain.validatedAt
+          };
+        })
       }
     });
 
