@@ -39,6 +39,23 @@ export const roleInheritance = [
  */
 export const policies = [
   // ============================================
+  // LEGACY ROLE PERMISSIONS (Direct mappings for backwards compatibility)
+  // ============================================
+
+  // Legacy restaurant_owner gets all owner permissions
+  ['restaurant_owner', 'pos:manage', 'read'],
+  ['restaurant_owner', 'pos:manage', 'create'],
+  ['restaurant_owner', 'pos:manage', 'update'],
+  ['restaurant_owner', 'pos:manage', 'delete'],
+  ['restaurant_owner', 'users:all', 'read'],
+  ['restaurant_owner', 'users:all', 'create'],
+  ['restaurant_owner', 'users:all', 'update'],
+  ['restaurant_owner', 'users:all', 'delete'],
+  ['restaurant_owner', 'analytics:all', 'read'],
+  ['restaurant_owner', 'restaurant:settings', 'read'],
+  ['restaurant_owner', 'restaurant:settings', 'update'],
+
+  // ============================================
   // EMPLOYEE PERMISSIONS (Base Level)
   // ============================================
 
