@@ -699,7 +699,7 @@ export class CorrelationEngine {
   private generateRealisticSeasonalWeather(
     date: Date,
     location: { lat: number; lon: number }
-  ): { temperature: number; condition: string } {
+  ): any {
     const dayOfYear = this.getDayOfYear(date);
     const year = date.getFullYear();
 
