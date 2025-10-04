@@ -5,7 +5,7 @@
  * Uses Casbin RBAC with role inheritance
  */
 
-import { newEnforcer, Enforcer } from 'casbin';
+import { newEnforcer, Enforcer, newModelFromString } from 'casbin';
 import { getAllPolicies } from './policies';
 import { UserRole } from '@/models/Restaurant';
 
@@ -57,7 +57,7 @@ class CasbinService {
   private async _doInitialize(): Promise<Enforcer> {
     try {
       // Inline model definition (works better in serverless environments like Vercel)
-      const model = `
+      const modelText = `
 [request_definition]
 r = sub, obj, act
 
@@ -73,6 +73,9 @@ e = some(where (p.eft == allow))
 [matchers]
 m = g(r.sub, p.sub) && r.obj == p.obj && r.act == p.act
 `;
+
+      // Create model from string (not file path)
+      const model = newModelFromString(modelText);
 
       // Create enforcer with inline model
       const enforcer = await newEnforcer(model);
