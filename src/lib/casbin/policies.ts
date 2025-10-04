@@ -125,6 +125,10 @@ export const policies = [
   // POS Integration
   [UserRole.ADMIN, 'pos:integration', 'read'],
   [UserRole.ADMIN, 'pos:integration', 'update'],
+  [UserRole.ADMIN, 'pos:manage', 'read'],
+  [UserRole.ADMIN, 'pos:manage', 'create'],
+  [UserRole.ADMIN, 'pos:manage', 'update'],
+  [UserRole.ADMIN, 'pos:manage', 'delete'],
 
   // Billing & Subscription
   [UserRole.ADMIN, 'billing:restaurant', 'read'],
