@@ -24,7 +24,8 @@ import {
   Award,
   UserCircle,
   Briefcase,
-  Link as LinkIcon
+  Link as LinkIcon,
+  RefreshCw
 } from 'lucide-react';
 import { UserRole } from '@/models/Restaurant';
 
