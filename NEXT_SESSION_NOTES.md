@@ -49,12 +49,49 @@
 
 **To Investigate:**
 - [ ] How long does data loading actually take?
-- [ ] Check if correlation discovery programs are running
+- [x] Check if correlation discovery programs are running - **FOUND ISSUE!**
 - [ ] Verify all analytics jobs are executing properly
 - [ ] Check Redis queue status
 - [ ] Review worker logs for errors
 
 **Location:** `/src/components/dashboard/AnalyticsDashboard.tsx`
+
+### 1.5. **CRITICAL: Correlation Engine Not Using Real Data** 🚨
+**Current Status:** Correlation discovery runs but finds 0 correlations
+
+**Root Cause Identified:**
+- **Weather correlations:** Using random/simulated data instead of real OpenWeatherMap API calls
+  - Code says "Note: In production, fetch actual weather data"
+  - Currently generates random temps: `baseTemp + (Math.random() * 20 - 10)`
+  - OpenWeather API key is configured ✅ but not being used ❌
+
+- **Event correlations:** Returns empty array - not implemented yet
+  - Function just returns `[]` with TODO comment
+
+- **Holiday correlations:** Partially implemented, needs testing
+
+**Transaction Data Status:**
+- ✅ 5,851 transactions available (way more than 30 minimum)
+- ✅ Correlation discovery cron job runs successfully
+- ❌ No correlations found because using fake data
+
+**To Fix:**
+- [ ] Update `/src/services/CorrelationEngine.ts` line 146-206
+- [ ] Replace simulated weather with real `weatherService.getHistoricalWeather()` calls
+- [ ] Implement actual event fetching in `analyzeEventCorrelations()`
+- [ ] Test holiday correlation analysis
+- [ ] Consider caching weather data to avoid rate limits
+
+**Expected Outcome:**
+Once fixed, should discover correlations like:
+- "Rain decreases foot traffic by 25%"
+- "Temperatures above 80°F increase beverage sales by 35%"
+- "Holiday weekends show 45% revenue increase"
+- "Local events within 1 mile increase traffic by 20%"
+
+**Files to Edit:**
+- `/src/services/CorrelationEngine.ts` (lines 146-240)
+- `/src/services/ExternalDataService.ts` (already has weather API ready)
 
 ### 2. Business Analytics Authorization Errors
 **Current Status:** Owner getting "not authorized" when accessing business analytics
