@@ -1,16 +1,12 @@
 'use client';
 
-import MainLayout from '../components/layout/MainLayout';
 import Link from 'next/link';
 import { BarChart3, MessageSquare, ListTodo, Users, Trophy, Zap } from 'lucide-react';
 
 export default function Home() {
-  // Note: Removed auto-redirect to fix client-side routing issues
-  // Users can manually navigate to /dashboard if logged in
-
   return (
-    <MainLayout>
-      <div className="space-y-12">
+    <div className="min-h-screen bg-gray-50 p-8">
+      <div className="max-w-7xl mx-auto space-y-12">
         {/* Hero Section */}
         <div className="text-center">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
@@ -112,6 +108,6 @@ export default function Home() {
           </Link>
         </div>
       </div>
-    </MainLayout>
+    </div>
   );
 }
