@@ -63,7 +63,20 @@ interface ICorrelation {
     actionable: boolean;
     recommendation?: string;
   };
-  factor: any;
+  externalFactor: {
+    type: string;
+    temperature?: number;
+    weatherCondition?: string;
+    precipitation?: number;
+    eventType?: string;
+    eventDistance?: number;
+    eventAttendance?: number;
+    holidayName?: string;
+    holidayType?: string;
+    dayOfWeek?: string;
+    hour?: number;
+    isWeekend?: boolean;
+  };
   outcome: {
     metric: string;
     value: number;

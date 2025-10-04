@@ -35,8 +35,8 @@ export async function GET(request: NextRequest) {
             id: plain._id,
             type: plain.type,
             pattern: plain.pattern,
-            factor: plain.factor,
-            outcome: plain.outcome,
+            externalFactor: plain.externalFactor,
+            outcome: plain.businessOutcome,
             statistics: plain.statistics,
             createdAt: plain.createdAt,
             validatedAt: plain.validatedAt
