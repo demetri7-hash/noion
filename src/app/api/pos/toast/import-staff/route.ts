@@ -32,8 +32,8 @@ export async function POST(request: NextRequest) {
     // Decrypt Toast credentials
     const credentials = decryptToastCredentials({
       clientId: restaurant.posConfig.clientId,
-      clientSecret: restaurant.posConfig.encryptedClientSecret!,
-      locationGuid: restaurant.posConfig.locationId!
+      encryptedClientSecret: restaurant.posConfig.encryptedClientSecret!,
+      locationId: restaurant.posConfig.locationId!
     });
 
     // Get Toast access token
