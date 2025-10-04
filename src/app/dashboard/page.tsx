@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, Suspense } from 'react';
-import DashboardLayout from '../../components/layout/DashboardLayout';
+import MainLayout from '../../components/layout/MainLayout';
 import AnalyticsDashboard from '../../components/dashboard/AnalyticsDashboard';
 import { useSearchParams } from 'next/navigation';
 
@@ -24,9 +24,9 @@ function DashboardContent() {
   }, [searchParams]);
 
   return (
-    <DashboardLayout>
+    <MainLayout>
       <AnalyticsDashboard />
-    </DashboardLayout>
+    </MainLayout>
   );
 }
 

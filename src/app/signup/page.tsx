@@ -169,7 +169,7 @@ export default function SignupPage() {
                 className="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
               />
               <p className="mt-1 text-xs text-gray-500">
-                Min 8 characters, 1 uppercase, 1 lowercase, 1 number, 1 special character
+                Min 8 characters, 1 uppercase, 1 lowercase, 1 number, 1 special (@$!%*?&)
               </p>
             </div>
 
