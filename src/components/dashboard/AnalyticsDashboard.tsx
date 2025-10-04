@@ -1,17 +1,21 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { 
-  TrendingUp, 
-  Users, 
-  DollarSign, 
-  Clock, 
+import {
+  TrendingUp,
+  Users,
+  DollarSign,
+  Clock,
   AlertTriangle,
   ChevronUp,
   ChevronDown,
   BarChart3,
   PieChart,
-  Activity
+  Activity,
+  Lightbulb,
+  CloudRain,
+  Sun,
+  Zap
 } from 'lucide-react';
 
 // Types for dashboard data
@@ -48,6 +52,33 @@ interface IRevenueInsight {
   status: 'new' | 'viewed' | 'acted_upon';
 }
 
+interface ICorrelation {
+  id: string;
+  type: string;
+  pattern: {
+    description: string;
+    whenCondition: string;
+    thenOutcome: string;
+    strength: string;
+    actionable: boolean;
+    recommendation?: string;
+  };
+  factor: any;
+  outcome: {
+    metric: string;
+    value: number;
+    change: number;
+    baseline: number;
+  };
+  statistics: {
+    correlation: number;
+    confidence: number;
+    pValue: number;
+    sampleSize: number;
+  };
+  createdAt: string;
+}
+
 /**
  * Analytics Dashboard Component
  * Main dashboard showing revenue insights, key metrics, and actionable recommendations
@@ -55,6 +86,7 @@ interface IRevenueInsight {
 export default function AnalyticsDashboard() {
   const [metrics, setMetrics] = useState<IDashboardMetrics | null>(null);
   const [insights, setInsights] = useState<IRevenueInsight[]>([]);
+  const [correlations, setCorrelations] = useState<ICorrelation[]>([]);
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d'>('30d');
   const [selectedInsight, setSelectedInsight] = useState<IRevenueInsight | null>(null);
@@ -62,6 +94,7 @@ export default function AnalyticsDashboard() {
   // Load dashboard data
   useEffect(() => {
     loadDashboardData();
+    loadCorrelations();
   }, [timeRange]);
 
   const loadDashboardData = async () => {
@@ -115,6 +148,28 @@ export default function AnalyticsDashboard() {
       setInsights([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadCorrelations = async () => {
+    try {
+      const restaurantId = typeof window !== 'undefined'
+        ? localStorage.getItem('restaurantId')
+        : null;
+
+      if (!restaurantId) {
+        return;
+      }
+
+      const response = await fetch(`/api/correlations?restaurantId=${restaurantId}`);
+      const result = await response.json();
+
+      if (result.success && result.data?.correlations) {
+        setCorrelations(result.data.correlations);
+        console.log(`✅ Loaded ${result.data.correlations.length} AI correlations`);
+      }
+    } catch (error) {
+      console.error('Failed to load correlations:', error);
     }
   };
 
@@ -195,6 +250,107 @@ export default function AnalyticsDashboard() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* AI-Discovered Insights */}
+        {correlations.length > 0 && (
+          <div className="mb-8">
+            <div className="flex items-center mb-4">
+              <Zap className="w-6 h-6 text-purple-600 mr-2" />
+              <h2 className="text-2xl font-bold text-gray-900">AI-Discovered Insights</h2>
+              <span className="ml-3 px-3 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full">
+                {correlations.length} Pattern{correlations.length > 1 ? 's' : ''} Found
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {correlations.map((correlation) => (
+                <div
+                  key={correlation.id}
+                  className="bg-gradient-to-br from-purple-50 to-blue-50 border-2 border-purple-200 rounded-lg p-6 hover:shadow-lg transition-shadow"
+                >
+                  {/* Header */}
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center">
+                      {correlation.type.includes('WEATHER') ? (
+                        <CloudRain className="w-8 h-8 text-purple-600 mr-3" />
+                      ) : correlation.type.includes('HOLIDAY') ? (
+                        <Sun className="w-8 h-8 text-purple-600 mr-3" />
+                      ) : (
+                        <TrendingUp className="w-8 h-8 text-purple-600 mr-3" />
+                      )}
+                      <div>
+                        <h3 className="font-bold text-gray-900 text-lg">
+                          {correlation.pattern.description}
+                        </h3>
+                        <span className={`text-xs font-medium px-2 py-1 rounded mt-1 inline-block ${
+                          correlation.pattern.strength === 'strong'
+                            ? 'bg-green-100 text-green-700'
+                            : correlation.pattern.strength === 'moderate'
+                            ? 'bg-yellow-100 text-yellow-700'
+                            : 'bg-blue-100 text-blue-700'
+                        }`}>
+                          {correlation.pattern.strength.toUpperCase()} CORRELATION
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Pattern Details */}
+                  <div className="space-y-3 mb-4">
+                    <div className="flex items-start">
+                      <div className="bg-white rounded-lg px-3 py-2 flex-1">
+                        <p className="text-sm text-gray-600 font-medium mb-1">When:</p>
+                        <p className="text-gray-900">{correlation.pattern.whenCondition}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start">
+                      <div className="bg-white rounded-lg px-3 py-2 flex-1">
+                        <p className="text-sm text-gray-600 font-medium mb-1">Then:</p>
+                        <p className="text-gray-900 font-semibold">{correlation.pattern.thenOutcome}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Recommendation */}
+                  {correlation.pattern.recommendation && (
+                    <div className="bg-purple-600 text-white rounded-lg px-4 py-3 mb-4">
+                      <div className="flex items-start">
+                        <Lightbulb className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-sm font-medium mb-1">💡 Recommended Action:</p>
+                          <p className="text-sm">{correlation.pattern.recommendation}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Statistics */}
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="bg-white rounded-lg px-3 py-2 text-center">
+                      <p className="text-xs text-gray-600 mb-1">Correlation</p>
+                      <p className="text-lg font-bold text-purple-600">
+                        {(correlation.statistics.correlation * 100).toFixed(0)}%
+                      </p>
+                    </div>
+                    <div className="bg-white rounded-lg px-3 py-2 text-center">
+                      <p className="text-xs text-gray-600 mb-1">Confidence</p>
+                      <p className="text-lg font-bold text-purple-600">
+                        {correlation.statistics.confidence.toFixed(0)}%
+                      </p>
+                    </div>
+                    <div className="bg-white rounded-lg px-3 py-2 text-center">
+                      <p className="text-xs text-gray-600 mb-1">Sample Size</p>
+                      <p className="text-lg font-bold text-purple-600">
+                        {correlation.statistics.sampleSize}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Data Syncing Notice */}
         {!metrics && insights.length === 0 && (
           <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-6 mb-8">
