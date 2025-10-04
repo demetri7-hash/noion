@@ -68,6 +68,14 @@ export async function POST(req: NextRequest) {
       }
     });
 
+    // Check if registration was successful
+    if (!result.success) {
+      return NextResponse.json(
+        { error: result.message || 'Registration failed' },
+        { status: 400 }
+      );
+    }
+
     // Set HTTP-only cookie for refresh token
     const response = NextResponse.json(
       {
