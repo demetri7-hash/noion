@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Build users list: owner + imported employees
-    const users = [
+    const users: any[] = [
       // Owner
       {
         id: String(restaurant._id),

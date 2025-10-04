@@ -162,7 +162,8 @@ export interface IAnalyticsSettings {
 
 // Interface for imported employee data
 export interface IEmployee {
-  userId: string;                    // User ID (email or generated)
+  _id?: any;                          // Mongoose subdocument ID
+  userId: string;                     // User ID (email or generated)
   toastEmployeeId?: string;           // Toast employee GUID
   email?: string;                     // Employee email
   firstName: string;                  // First name
