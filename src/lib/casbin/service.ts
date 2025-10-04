@@ -5,7 +5,7 @@
  * Uses Casbin RBAC with role inheritance
  */
 
-import { newEnforcer, Enforcer, newModelFromString } from 'casbin';
+import { newEnforcer, Enforcer, newModelFromString, StringAdapter } from 'casbin';
 import { getAllPolicies } from './policies';
 import { UserRole } from '@/models/Restaurant';
 
@@ -74,20 +74,30 @@ e = some(where (p.eft == allow))
 m = g(r.sub, p.sub) && r.obj == p.obj && r.act == p.act
 `;
 
-      // Create model from string (not file path)
-      const model = newModelFromString(modelText);
-
-      // Create enforcer with inline model
-      const enforcer = await newEnforcer(model);
-
       // Load policies
       const { policies, roleInheritance } = getAllPolicies();
 
+      // Build policy string for StringAdapter
+      let policyText = '';
+
       // Add policies
-      await enforcer.addPolicies(policies);
+      for (const policy of policies) {
+        policyText += `p, ${policy.join(', ')}\n`;
+      }
 
       // Add role inheritance
-      await enforcer.addGroupingPolicies(roleInheritance);
+      for (const grouping of roleInheritance) {
+        policyText += `g, ${grouping.join(', ')}\n`;
+      }
+
+      // Create model from string
+      const model = newModelFromString(modelText);
+
+      // Create adapter from policy string
+      const adapter = new StringAdapter(policyText);
+
+      // Create enforcer with model and string adapter
+      const enforcer = await newEnforcer(model, adapter);
 
       console.log('✅ Casbin enforcer initialized with', policies.length, 'policies');
 
