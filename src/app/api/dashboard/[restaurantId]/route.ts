@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import { Transaction, Insight, Restaurant } from '@/models';
+import mongoose from 'mongoose';
 
 /**
  * GET /api/dashboard/[restaurantId]
@@ -125,16 +126,19 @@ export async function GET(
     const previousStartDate = new Date(startDate.getTime() - periodLength);
     const previousEndDate = new Date(startDate);
 
+    // Convert restaurantId to ObjectId for querying
+    const restaurantObjectId = new mongoose.Types.ObjectId(restaurantId);
+
     // Fetch current period transactions
     const currentTransactions = await Transaction.find({
-      restaurantId: restaurantId,
+      restaurantId: restaurantObjectId,
       transactionDate: { $gte: startDate, $lte: endDate },
       status: { $ne: 'voided' }
     });
 
     // Fetch previous period transactions
     const previousTransactions = await Transaction.find({
-      restaurantId: restaurantId,
+      restaurantId: restaurantObjectId,
       transactionDate: { $gte: previousStartDate, $lte: previousEndDate },
       status: { $ne: 'voided' }
     });
@@ -206,7 +210,7 @@ export async function GET(
 
     // Fetch insights
     const insights = await Insight.find({
-      restaurantId: restaurantId,
+      restaurantId: restaurantObjectId,
       status: { $in: ['generated', 'sent', 'viewed'] }
     })
       .sort({ createdAt: -1 })
