@@ -16,13 +16,13 @@ export default function Home() {
             </div>
             <div className="flex gap-4">
               <Link
-                href="/dashboard"
+                href="/login"
                 className="px-4 py-2 text-blue-600 hover:text-blue-700 font-medium"
               >
                 Sign In
               </Link>
               <Link
-                href="/dashboard"
+                href="/signup"
                 className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium"
               >
                 Get Started
@@ -127,7 +127,7 @@ export default function Home() {
         {/* CTA */}
         <div className="text-center">
           <Link
-            href="/dashboard"
+            href="/signup"
             className="inline-block bg-blue-600 text-white px-8 py-3 rounded-lg text-lg font-semibold hover:bg-blue-700 transition-colors"
           >
             Get Started
