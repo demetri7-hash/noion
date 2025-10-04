@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
             outcome: plain.businessOutcome,
             statistics: plain.statistics,
             createdAt: plain.createdAt,
-            validatedAt: plain.validatedAt
+            updatedAt: plain.updatedAt
           };
         })
       }
