@@ -855,6 +855,45 @@ export class ToastIntegrationService {
       throw error;
     }
   }
+
+  /**
+   * Fetch employee time entries (hours worked) from Toast Labor API
+   */
+  async fetchTimeEntries(
+    credentials: IToastCredentials,
+    startDate: Date,
+    endDate: Date
+  ): Promise<any[]> {
+    try {
+      // Get access token
+      const authResponse = await this.authenticateRestaurant(credentials);
+      const accessToken = authResponse.token.accessToken;
+
+      // Format dates for Toast API (ISO 8601)
+      const startDateStr = startDate.toISOString();
+      const endDateStr = endDate.toISOString();
+
+      // Make API request to get time entries
+      const response = await axios.get(
+        `${TOAST_BASE_URL}/labor/v1/timeEntries`,
+        {
+          params: {
+            startDate: startDateStr,
+            endDate: endDateStr
+          },
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Toast-Restaurant-External-ID': credentials.locationGuid
+          }
+        }
+      );
+
+      return response.data || [];
+    } catch (error: any) {
+      console.error('Failed to fetch time entries from Toast:', error.response?.data || error.message);
+      return [];
+    }
+  }
 }
 
 // Export singleton instance

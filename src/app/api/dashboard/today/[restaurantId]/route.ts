@@ -3,6 +3,8 @@ import connectDB from '@/lib/mongodb';
 import { Transaction, Restaurant } from '@/models';
 import mongoose from 'mongoose';
 import { find as findTimezone } from 'geo-tz';
+import { toastIntegration } from '@/services/ToastIntegration';
+import { decryptToastCredentials } from '@/utils/toastEncryption';
 
 export const dynamic = 'force-dynamic';
 
@@ -116,6 +118,38 @@ export async function GET(
       return `${displayHour}:00 ${period}`;
     };
 
+    // Fetch hours worked from Toast Labor API
+    const hoursWorkedMap = new Map<string, number>();
+
+    if (restaurant?.posConfig?.isConnected && restaurant.posConfig.type === 'toast') {
+      try {
+        const credentials = decryptToastCredentials({
+          clientId: restaurant.posConfig.clientId!,
+          encryptedClientSecret: restaurant.posConfig.encryptedClientSecret!,
+          locationId: restaurant.posConfig.locationId!
+        });
+
+        // Fetch time entries for today
+        const timeEntries = await toastIntegration.fetchTimeEntries(
+          credentials,
+          todayStartUTC,
+          todayEndUTC
+        );
+
+        // Calculate hours worked per employee
+        timeEntries.forEach((entry: any) => {
+          const employeeId = entry.employeeReference?.guid;
+          if (employeeId) {
+            const hours = (entry.regularHours || 0) + (entry.overtimeHours || 0);
+            hoursWorkedMap.set(employeeId, (hoursWorkedMap.get(employeeId) || 0) + hours);
+          }
+        });
+      } catch (error) {
+        console.error('Error fetching time entries:', error);
+        // Continue without hours data
+      }
+    }
+
     // Calculate top staff performance for today
     const staffPerformance: { [staffId: string]: any } = {};
 
@@ -148,7 +182,7 @@ export async function GET(
             sales: 0,
             transactions: 0,
             avgTicket: 0,
-            hoursWorked: 0, // TODO: Calculate from shift data
+            hoursWorked: hoursWorkedMap.get(toastEmployeeId) || 0,
             // Gamification data if imported
             points: importedStaff?.points || 0,
             level: importedStaff?.level || 1
