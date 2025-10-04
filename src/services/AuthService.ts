@@ -94,35 +94,58 @@ export class AuthService {
       // Create restaurant with owner
       const restaurant = new Restaurant({
         name: userData.restaurantData.name,
+        type: 'other', // Default restaurant type
         location: {
-          address: userData.restaurantData.address,
-          city: userData.restaurantData.city,
-          state: userData.restaurantData.state,
-          zipCode: userData.restaurantData.zipCode,
-          timezone: userData.restaurantData.timezone
+          address: userData.restaurantData.address || '123 Main St',
+          city: userData.restaurantData.city || 'New York',
+          state: userData.restaurantData.state || 'NY',
+          zipCode: userData.restaurantData.zipCode || '10001',
+          country: 'US'
         },
-        cuisine: userData.restaurantData.cuisine,
         owner: {
           firstName: userData.firstName,
           lastName: userData.lastName,
           email: userData.email.toLowerCase(),
           password: hashedPassword,
-          phone: userData.phone,
+          phone: userData.phone || '555-0000',
           role: UserRole.RESTAURANT_OWNER
         },
         status: 'trial',
         subscription: {
           plan: 'trial',
+          tier: 'pulse',
+          status: 'trialing',
+          startDate: new Date(),
+          billingCycle: 'monthly',
+          amount: 0, // Free trial
+          currency: 'USD',
           trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 14 days trial
         },
+        posConfig: {
+          type: 'other',
+          isConnected: false
+        },
+        analyticsSettings: {
+          timezone: userData.restaurantData.timezone || 'America/New_York',
+          businessHours: {
+            monday: { open: '09:00', close: '22:00' },
+            tuesday: { open: '09:00', close: '22:00' },
+            wednesday: { open: '09:00', close: '22:00' },
+            thursday: { open: '09:00', close: '22:00' },
+            friday: { open: '09:00', close: '23:00' },
+            saturday: { open: '09:00', close: '23:00' },
+            sunday: { open: '10:00', close: '21:00' }
+          },
+          enableEmailReports: true,
+          reportFrequency: 'weekly'
+        },
         features: {
-          posIntegration: true,
-          aiInsights: true,
-          customReports: false,
-          multiLocation: false,
-          advancedAnalytics: false,
-          apiAccess: false,
-          discoveryReportSent: false
+          discoveryReportSent: false,
+          hasViewedDashboard: false,
+          hasGeneratedReport: false,
+          enableVideoAnalytics: false,
+          enableAudioAnalytics: false,
+          enablePredictiveAnalytics: false
         }
       });
 
