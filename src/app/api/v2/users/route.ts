@@ -39,11 +39,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 });
     }
 
-    // For now, we only have owner in the schema
-    // TODO: Extend to support multiple employees when Employee collection is added
+    // Build users list: owner + imported employees
     const users = [
+      // Owner
       {
-        id: restaurant._id,
+        id: String(restaurant._id),
+        userId: restaurant.owner.email,
         email: restaurant.owner.email,
         firstName: restaurant.owner.firstName,
         lastName: restaurant.owner.lastName,
@@ -54,13 +55,44 @@ export async function GET(request: NextRequest) {
         level: restaurant.owner.level || 1,
         streak: restaurant.owner.streak || 0,
         hireDate: restaurant.owner.hireDate,
+        isImported: false,
+        importedFrom: null,
       },
     ];
 
+    // Add imported team members
+    if (restaurant.team?.employees && restaurant.team.employees.length > 0) {
+      restaurant.team.employees.forEach((emp: any) => {
+        users.push({
+          id: emp._id ? String(emp._id) : emp.userId,
+          userId: emp.userId,
+          toastEmployeeId: emp.toastEmployeeId,
+          email: emp.email || null,
+          firstName: emp.firstName,
+          lastName: emp.lastName,
+          role: emp.role || UserRole.EMPLOYEE,
+          phone: emp.phone || null,
+          isActive: emp.isActive ?? true,
+          points: emp.points || 0,
+          level: emp.level || 1,
+          streak: emp.streak || 0,
+          badges: emp.badges || [],
+          hireDate: emp.importedAt || null,
+          isImported: true,
+          importedFrom: emp.importedFrom || 'unknown',
+          toastData: emp.toastData || null,
+        });
+      });
+    }
+
+    // Filter by role if specified
+    const filteredUsers = role ? users.filter((u) => u.role === role) : users;
+
     return NextResponse.json({
       success: true,
-      users: role ? users.filter((u) => u.role === role) : users,
-      count: users.length,
+      users: filteredUsers,
+      count: filteredUsers.length,
+      totalTeamSize: users.length,
     });
   } catch (error) {
     console.error('Get users error:', error);
