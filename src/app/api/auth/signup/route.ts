@@ -18,15 +18,16 @@ export async function POST(req: NextRequest) {
       password,
       phone,
       restaurantName,
-      address = '',
-      city = '',
-      state = '',
-      zipCode = '',
-      cuisine = 'General'
+      restaurantType,
+      address,
+      city,
+      state,
+      zipCode,
+      subscriptionTier = 'intelligence'
     } = body;
 
     // Validation
-    if (!firstName || !lastName || !email || !password || !restaurantName) {
+    if (!firstName || !lastName || !email || !password || !phone || !restaurantName || !restaurantType || !address || !city || !state || !zipCode) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -56,14 +57,15 @@ export async function POST(req: NextRequest) {
       lastName,
       email,
       password,
-      phone: phone || '',
+      phone,
       restaurantData: {
         name: restaurantName,
+        type: restaurantType,
         address,
         city,
         state,
         zipCode,
-        cuisine,
+        subscriptionTier,
         timezone: 'America/New_York'
       }
     });

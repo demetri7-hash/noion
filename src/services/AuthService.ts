@@ -56,14 +56,15 @@ export class AuthService {
     password: string;
     firstName: string;
     lastName: string;
-    phone?: string;
+    phone: string;
     restaurantData: {
       name: string;
+      type: string;
       address: string;
       city: string;
       state: string;
       zipCode: string;
-      cuisine: string;
+      subscriptionTier: string;
       timezone: string;
     };
   }): Promise<IAuthResult> {
@@ -94,12 +95,12 @@ export class AuthService {
       // Create restaurant with owner
       const restaurant = new Restaurant({
         name: userData.restaurantData.name,
-        type: 'other', // Default restaurant type
+        type: userData.restaurantData.type,
         location: {
-          address: userData.restaurantData.address || '123 Main St',
-          city: userData.restaurantData.city || 'New York',
-          state: userData.restaurantData.state || 'NY',
-          zipCode: userData.restaurantData.zipCode || '10001',
+          address: userData.restaurantData.address,
+          city: userData.restaurantData.city,
+          state: userData.restaurantData.state,
+          zipCode: userData.restaurantData.zipCode,
           country: 'US'
         },
         owner: {
@@ -107,17 +108,17 @@ export class AuthService {
           lastName: userData.lastName,
           email: userData.email.toLowerCase(),
           password: hashedPassword,
-          phone: userData.phone || '555-0000',
+          phone: userData.phone,
           role: UserRole.RESTAURANT_OWNER
         },
         status: 'trial',
         subscription: {
           plan: 'trial',
-          tier: 'pulse',
+          tier: userData.restaurantData.subscriptionTier,
           status: 'trialing',
           startDate: new Date(),
           billingCycle: 'monthly',
-          amount: 0, // Free trial
+          amount: 0, // Free trial - no payment required
           currency: 'USD',
           trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 14 days trial
         },
@@ -126,7 +127,7 @@ export class AuthService {
           isConnected: false
         },
         analyticsSettings: {
-          timezone: userData.restaurantData.timezone || 'America/New_York',
+          timezone: userData.restaurantData.timezone,
           businessHours: {
             monday: { open: '09:00', close: '22:00' },
             tuesday: { open: '09:00', close: '22:00' },
