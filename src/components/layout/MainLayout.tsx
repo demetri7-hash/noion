@@ -407,14 +407,22 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                         <div className="text-xs text-gray-500">{user.email}</div>
                       </div>
                       <button
-                        onClick={() => router.push('/profile')}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setUserMenuOpen(false);
+                          router.push('/profile');
+                        }}
                         className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                       >
                         <UserCircle className="inline h-4 w-4 mr-2" />
                         Your Profile
                       </button>
                       <button
-                        onClick={() => router.push('/settings')}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setUserMenuOpen(false);
+                          router.push('/settings');
+                        }}
                         className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                       >
                         <Settings className="inline h-4 w-4 mr-2" />
@@ -422,7 +430,10 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                       </button>
                       <div className="border-t border-gray-200 mt-1">
                         <button
-                          onClick={handleLogout}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleLogout();
+                          }}
                           className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
                         >
                           <LogOut className="inline h-4 w-4 mr-2" />
