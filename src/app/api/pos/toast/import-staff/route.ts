@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { authorize } from '@/middleware/authorize';
 import connectDB from '@/lib/mongodb';
 import Restaurant from '@/models/Restaurant';
-import { decryptToastCredentials } from '@/lib/encryption';
+import { decryptToastCredentials } from '@/utils/toastEncryption';
 import { UserRole } from '@/models/Restaurant';
 
 export const dynamic = 'force-dynamic';
