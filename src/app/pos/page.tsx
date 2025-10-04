@@ -1,15 +1,137 @@
-import React from 'react';
-import DashboardLayout from '../../components/layout/DashboardLayout';
-import POSConnectionFlow from '../../components/pos/POSConnectionFlow';
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import MainLayout from '../../components/layout/MainLayout';
+import ToastConnectionWizard from '../../components/pos/ToastConnectionWizard';
+import { CheckCircle, AlertCircle, RefreshCw, Calendar } from 'lucide-react';
 
 /**
  * POS Integration Page
  * Handles POS system connection and management
  */
 export default function POSPage() {
+  const [isConnected, setIsConnected] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    checkConnectionStatus();
+  }, []);
+
+  const checkConnectionStatus = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) return;
+
+      const response = await fetch('/api/pos/toast/connect', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data) {
+          setIsConnected(result.data.isConnected);
+          setConnectionStatus(result.data);
+        }
+      }
+    } catch (error) {
+      console.error('Error checking connection status:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatLastSync = (isoDate?: string) => {
+    if (!isoDate) return 'Never';
+    const date = new Date(isoDate);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins} minutes ago`;
+    if (diffMins < 1440) return `${Math.floor(diffMins / 60)} hours ago`;
+    return `${Math.floor(diffMins / 1440)} days ago`;
+  };
+
+  if (loading) {
+    return (
+      <MainLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <RefreshCw className="h-8 w-8 animate-spin text-blue-600" />
+        </div>
+      </MainLayout>
+    );
+  }
+
   return (
-    <DashboardLayout>
-      <POSConnectionFlow />
-    </DashboardLayout>
+    <MainLayout>
+      <div className="min-h-screen bg-gray-50">
+        {/* Header */}
+        <div className="bg-white shadow-sm border-b">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <h1 className="text-2xl font-bold text-gray-900">POS Integration</h1>
+            {connectionStatus && (
+              <div className="mt-2 flex items-center">
+                {isConnected ? (
+                  <>
+                    <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                    <span className="text-green-700 font-medium">Connected to Toast POS</span>
+                    {connectionStatus.lastSyncAt && (
+                      <span className="ml-3 text-gray-500 text-sm flex items-center">
+                        <Calendar className="h-4 w-4 mr-1" />
+                        Last synced {formatLastSync(connectionStatus.lastSyncAt)}
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <AlertCircle className="h-5 w-5 text-gray-400 mr-2" />
+                    <span className="text-gray-600">Not connected</span>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="py-8">
+          {isConnected ? (
+            <div className="max-w-2xl mx-auto px-4">
+              <div className="bg-white rounded-lg shadow p-6">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">Toast POS Connection</h2>
+
+                <div className="space-y-3 mb-6">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Location ID:</span>
+                    <span className="font-mono text-sm text-gray-900">{connectionStatus.locationId}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Auto-sync:</span>
+                    <span className="text-gray-900">{connectionStatus.syncInterval === 'on_login' ? 'On every login' : 'Manual'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Status:</span>
+                    <span className="text-green-600 font-medium">Active</span>
+                  </div>
+                </div>
+
+                <div className="bg-blue-50 border border-blue-200 rounded p-4">
+                  <p className="text-blue-700 text-sm">
+                    ✨ Your Toast data syncs automatically on every login, pulling only new data since your last visit. No need to reconnect!
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <ToastConnectionWizard />
+          )}
+        </div>
+      </div>
+    </MainLayout>
   );
 }

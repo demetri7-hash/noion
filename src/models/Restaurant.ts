@@ -94,14 +94,17 @@ export interface ILocation {
 export interface IPOSConfig {
   type: POSSystemType;
   isConnected: boolean;
-  clientId?: string;
-  encryptedAccessToken?: string;  // Encrypted for security
-  encryptedRefreshToken?: string; // Encrypted for security
-  lastSyncAt?: Date;
+  clientId?: string;                  // Encrypted Client ID
+  encryptedAccessToken?: string;      // Encrypted for security
+  encryptedRefreshToken?: string;     // Encrypted for security
+  encryptedClientSecret?: string;     // Encrypted Client Secret
+  lastSyncAt?: Date;                  // When data was last synced
+  syncInterval?: 'manual' | 'on_login' | 'hourly' | 'daily';  // Auto-sync strategy
+  isActive?: boolean;                 // Is POS connection active?
   webhookUrl?: string;
   webhookSecret?: string;
-  locationId?: string;           // For multi-location POS systems
-  managementGroupId?: string;    // For Toast specifically
+  locationId?: string;                // For multi-location POS systems (Toast GUID)
+  managementGroupId?: string;         // For Toast specifically
 }
 
 // Interface for subscription information
@@ -266,8 +269,8 @@ const RestaurantSchema = new Schema<IRestaurant>({
   
   // POS system integration
   posConfig: {
-    type: { 
-      type: String, 
+    type: {
+      type: String,
       enum: Object.values(POSSystemType),
       required: true,
       default: POSSystemType.OTHER
@@ -276,7 +279,14 @@ const RestaurantSchema = new Schema<IRestaurant>({
     clientId: { type: String },
     encryptedAccessToken: { type: String },
     encryptedRefreshToken: { type: String },
+    encryptedClientSecret: { type: String },
     lastSyncAt: { type: Date },
+    syncInterval: {
+      type: String,
+      enum: ['manual', 'on_login', 'hourly', 'daily'],
+      default: 'on_login'
+    },
+    isActive: { type: Boolean, default: false },
     webhookUrl: { type: String },
     webhookSecret: { type: String },
     locationId: { type: String },
