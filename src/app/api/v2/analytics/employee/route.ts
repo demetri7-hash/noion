@@ -21,7 +21,7 @@ export const runtime = 'nodejs';
 
 export async function GET(request: NextRequest) {
   // Authorize: employees can only read their own analytics
-  const authResult = await authorize('analytics', 'read')(request);
+  const authResult = await authorize('analytics:own', 'read')(request);
   if (authResult instanceof NextResponse) {
     return authResult; // Return error response
   }

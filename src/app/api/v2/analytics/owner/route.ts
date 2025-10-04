@@ -21,14 +21,14 @@ export const runtime = 'nodejs';
 
 export async function GET(request: NextRequest) {
   // Authorize: only owners and admins can read business-wide analytics
-  const authResult = await authorize('analytics', 'read')(request);
+  const authResult = await authorize('analytics:all', 'read')(request);
   if (authResult instanceof NextResponse) {
     return authResult; // Return error response
   }
   const { user } = authResult;
 
   // Only admins and owners can access this endpoint
-  if (!['admin', 'owner'].includes(user.role)) {
+  if (!['admin', 'owner', 'restaurant_owner'].includes(user.role)) {
     return NextResponse.json(
       { error: 'Forbidden: Admin or Owner role required' },
       { status: 403 }

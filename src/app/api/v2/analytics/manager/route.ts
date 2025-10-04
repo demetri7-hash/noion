@@ -21,14 +21,14 @@ export const runtime = 'nodejs';
 
 export async function GET(request: NextRequest) {
   // Authorize: managers and above can read team analytics
-  const authResult = await authorize('analytics', 'read')(request);
+  const authResult = await authorize('analytics:team', 'read')(request);
   if (authResult instanceof NextResponse) {
     return authResult; // Return error response
   }
   const { user } = authResult;
 
   // Only managers, admins, and owners can access this endpoint
-  if (!['manager', 'admin', 'owner'].includes(user.role)) {
+  if (!['manager', 'admin', 'owner', 'restaurant_owner', 'restaurant_manager'].includes(user.role)) {
     return NextResponse.json(
       { error: 'Forbidden: Manager role or above required' },
       { status: 403 }
