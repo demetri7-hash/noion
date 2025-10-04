@@ -15,6 +15,7 @@ export default function POSPage() {
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<any>(null);
+  const [disconnecting, setDisconnecting] = useState(false);
 
   useEffect(() => {
     checkConnectionStatus();
@@ -43,6 +44,38 @@ export default function POSPage() {
       console.error('Error checking connection status:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const disconnectPOS = async () => {
+    if (!confirm('Are you sure you want to disconnect Toast POS? You will need to reconnect to import data again.')) {
+      return;
+    }
+
+    try {
+      setDisconnecting(true);
+      const token = localStorage.getItem('authToken');
+      if (!token) return;
+
+      const response = await fetch('/api/pos/toast/connect', {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        setIsConnected(false);
+        setConnectionStatus(null);
+        setImportResult(null);
+      } else {
+        alert('Failed to disconnect Toast POS');
+      }
+    } catch (error) {
+      console.error('Error disconnecting:', error);
+      alert('Failed to disconnect Toast POS');
+    } finally {
+      setDisconnecting(false);
     }
   };
 
@@ -162,6 +195,17 @@ export default function POSPage() {
                   <p className="text-blue-700 text-sm">
                     ✨ Your Toast data syncs automatically on every login, pulling only new data since your last visit. No need to reconnect!
                   </p>
+                </div>
+
+                {/* Disconnect Button */}
+                <div className="mb-6">
+                  <button
+                    onClick={disconnectPOS}
+                    disabled={disconnecting}
+                    className="text-sm text-red-600 hover:text-red-700 underline disabled:opacity-50"
+                  >
+                    {disconnecting ? 'Disconnecting...' : 'Disconnect Toast POS'}
+                  </button>
                 </div>
 
                 {/* Staff Import Section */}

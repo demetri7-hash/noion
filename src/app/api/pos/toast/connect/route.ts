@@ -159,6 +159,52 @@ export async function POST(request: NextRequest) {
 }
 
 /**
+ * DELETE /api/pos/toast/connect
+ * Disconnect Toast POS
+ */
+export async function DELETE(request: NextRequest) {
+  const authCheck = await authorize('pos:manage', 'delete')(request);
+  if (authCheck instanceof NextResponse) return authCheck;
+
+  const { user } = authCheck;
+
+  try {
+    await connectDB();
+
+    const restaurant = await Restaurant.findById(user.restaurantId);
+    if (!restaurant) {
+      return NextResponse.json(
+        { error: 'Restaurant not found' },
+        { status: 404 }
+      );
+    }
+
+    // Clear POS configuration
+    restaurant.posConfig = {
+      type: POSSystemType.OTHER,
+      isConnected: false,
+      isActive: false
+    };
+
+    await restaurant.save();
+
+    console.log(`❌ Toast POS disconnected for restaurant ${user.restaurantId}`);
+
+    return NextResponse.json({
+      success: true,
+      message: 'Toast POS disconnected successfully'
+    });
+
+  } catch (error: any) {
+    console.error('Error disconnecting Toast:', error);
+    return NextResponse.json(
+      { error: error.message || 'Failed to disconnect Toast POS' },
+      { status: 500 }
+    );
+  }
+}
+
+/**
  * GET /api/pos/toast/connect
  * Check if user's Toast is connected
  */
