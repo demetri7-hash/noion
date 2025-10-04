@@ -30,6 +30,7 @@ export async function GET(request: NextRequest) {
     // Get query params
     const { searchParams } = new URL(request.url);
     const role = searchParams.get('role');
+    const isActive = searchParams.get('isActive'); // 'true', 'false', or null (all)
     const restaurantId = user.restaurantId;
 
     // Find restaurant and get users
@@ -85,14 +86,28 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    // Apply filters
+    let filteredUsers = users;
+
     // Filter by role if specified
-    const filteredUsers = role ? users.filter((u) => u.role === role) : users;
+    if (role) {
+      filteredUsers = filteredUsers.filter((u) => u.role === role);
+    }
+
+    // Filter by active status if specified
+    if (isActive === 'true') {
+      filteredUsers = filteredUsers.filter((u) => u.isActive === true);
+    } else if (isActive === 'false') {
+      filteredUsers = filteredUsers.filter((u) => u.isActive === false);
+    }
 
     return NextResponse.json({
       success: true,
       users: filteredUsers,
       count: filteredUsers.length,
       totalTeamSize: users.length,
+      activeCount: users.filter((u) => u.isActive).length,
+      inactiveCount: users.filter((u) => !u.isActive).length,
     });
   } catch (error) {
     console.error('Get users error:', error);

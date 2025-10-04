@@ -73,7 +73,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { access_token } = await tokenResponse.json();
+    const tokenData = await tokenResponse.json();
+    const access_token = tokenData.token?.accessToken || tokenData.access_token;
 
     // Fetch employees from Toast
     const employeesResponse = await fetch(
@@ -179,8 +180,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Save restaurant with imported employees
-    await restaurant.save();
+    // Save imported employees to database
+    await Restaurant.updateOne(
+      { _id: user.restaurantId },
+      { $set: { 'team.employees': restaurant.team.employees } }
+    );
+
+    console.log(`✅ Imported ${importedStaff.length} employees from Toast for restaurant ${user.restaurantId}`);
 
     return NextResponse.json({
       success: true,

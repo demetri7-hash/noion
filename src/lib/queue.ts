@@ -24,35 +24,42 @@ export interface SyncJobData {
 
 const QUEUE_NAME = 'pos-sync';
 
-// Queue options
-const queueOptions: QueueOptions = {
-  connection: getRedisConnection(),
-  defaultJobOptions: {
-    attempts: 3, // Retry up to 3 times
-    backoff: {
-      type: 'exponential',
-      delay: 5000 // Start with 5 second delay, then 10s, 20s
-    },
-    removeOnComplete: {
-      count: 100, // Keep last 100 completed jobs
-      age: 7 * 24 * 60 * 60 // Keep for 7 days
-    },
-    removeOnFail: {
-      count: 500, // Keep last 500 failed jobs for debugging
-      age: 30 * 24 * 60 * 60 // Keep for 30 days
-    }
-  }
-};
-
 let syncQueue: Queue<SyncJobData> | null = null;
 
 /**
  * Get or create the sync queue
  */
-export function getSyncQueue(): Queue<SyncJobData> {
+export function getSyncQueue(): Queue<SyncJobData> | null {
   if (syncQueue) {
     return syncQueue;
   }
+
+  const redisConnection = getRedisConnection();
+
+  // If Redis is not available (dev mode), return null
+  if (!redisConnection) {
+    console.warn('⚠️  Sync queue not available - Redis not configured');
+    return null;
+  }
+
+  const queueOptions: QueueOptions = {
+    connection: redisConnection,
+    defaultJobOptions: {
+      attempts: 3, // Retry up to 3 times
+      backoff: {
+        type: 'exponential',
+        delay: 5000 // Start with 5 second delay, then 10s, 20s
+      },
+      removeOnComplete: {
+        count: 100, // Keep last 100 completed jobs
+        age: 7 * 24 * 60 * 60 // Keep for 7 days
+      },
+      removeOnFail: {
+        count: 500, // Keep last 500 failed jobs for debugging
+        age: 30 * 24 * 60 * 60 // Keep for 30 days
+      }
+    }
+  };
 
   syncQueue = new Queue<SyncJobData>(QUEUE_NAME, queueOptions);
 
@@ -75,6 +82,13 @@ export async function enqueueSyncJob(
 ): Promise<string> {
   const queue = getSyncQueue();
 
+  // If queue is not available (dev mode without Redis), generate a mock job ID
+  if (!queue) {
+    const mockJobId = `dev-sync-${data.restaurantId}-${Date.now()}`;
+    console.warn(`⚠️  Background sync not available in development - would sync restaurant ${data.restaurantId}`);
+    return mockJobId;
+  }
+
   const job = await queue.add(
     'sync-pos-data',
     data,
@@ -94,6 +108,11 @@ export async function enqueueSyncJob(
  */
 export async function getJobStatus(jobId: string) {
   const queue = getSyncQueue();
+
+  if (!queue) {
+    return null;
+  }
+
   const job = await queue.getJob(jobId);
 
   if (!job) {
@@ -120,6 +139,10 @@ export async function getJobStatus(jobId: string) {
  */
 export async function getRestaurantJobs(restaurantId: string) {
   const queue = getSyncQueue();
+
+  if (!queue) {
+    return [];
+  }
 
   // Get all jobs
   const [waiting, active, completed, failed] = await Promise.all([

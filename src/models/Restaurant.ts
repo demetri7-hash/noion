@@ -395,40 +395,8 @@ const RestaurantSchema = new Schema<IRestaurant>({
 
   // Team and employee management
   team: {
-    employees: [{
-      userId: { type: String, required: true },
-      toastEmployeeId: { type: String },
-      email: { type: String },
-      firstName: { type: String, required: true },
-      lastName: { type: String, required: true },
-      role: {
-        type: String,
-        enum: [...Object.values(UserRole), 'restaurant_owner', 'restaurant_manager', 'restaurant_staff'],
-        default: UserRole.EMPLOYEE
-      },
-      phone: { type: String },
-      isActive: { type: Boolean, default: true },
-
-      // Gamification fields
-      points: { type: Number, default: 0, min: 0 },
-      level: { type: Number, default: 1, min: 1, max: 10 },
-      streak: { type: Number, default: 0, min: 0 },
-      badges: [{ type: String }],
-
-      // Toast-specific data
-      toastData: {
-        externalId: { type: String },
-        chosenName: { type: String },
-        jobTitle: { type: String },
-        wage: { type: Number },
-        createdDate: { type: String },
-        modifiedDate: { type: String }
-      },
-
-      // Metadata
-      importedAt: { type: Date },
-      importedFrom: { type: String }
-    }]
+    type: Schema.Types.Mixed,
+    default: () => ({ employees: [] })
   },
 
   analyticsSettings: {

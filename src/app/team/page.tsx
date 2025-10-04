@@ -57,6 +57,7 @@ export default function TeamPage() {
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
+  const [showInactive, setShowInactive] = useState(false);
 
   useEffect(() => {
     fetchTeamMembers();
@@ -65,7 +66,7 @@ export default function TeamPage() {
 
   useEffect(() => {
     applyFilters();
-  }, [teamMembers, searchQuery, roleFilter]);
+  }, [teamMembers, searchQuery, roleFilter, showInactive]);
 
   const fetchTeamMembers = async () => {
     try {
@@ -182,6 +183,11 @@ export default function TeamPage() {
 
   const applyFilters = () => {
     let filtered = [...teamMembers];
+
+    // Active/Inactive filter - exclude inactive by default
+    if (!showInactive) {
+      filtered = filtered.filter(member => member.isActive !== false);
+    }
 
     // Search filter
     if (searchQuery) {
@@ -325,6 +331,15 @@ export default function TeamPage() {
               <option value="manager">Manager</option>
               <option value="employee">Employee</option>
             </select>
+            <label className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+              <input
+                type="checkbox"
+                checked={showInactive}
+                onChange={(e) => setShowInactive(e.target.checked)}
+                className="h-4 w-4 text-blue-600 rounded focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700">Show Archived</span>
+            </label>
           </div>
         </div>
 
@@ -347,7 +362,9 @@ export default function TeamPage() {
             {filteredMembers.map((member) => (
               <div
                 key={member.id}
-                className="bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow"
+                className={`bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow ${
+                  !member.isActive ? 'opacity-60 border-2 border-gray-200' : ''
+                }`}
               >
                 {/* Member Header */}
                 <div className="flex items-start justify-between mb-4">
@@ -363,9 +380,12 @@ export default function TeamPage() {
                     </div>
                   </div>
                   {member.isActive ? (
-                    <CheckCircle className="h-5 w-5 text-green-500" />
+                    <CheckCircle className="h-5 w-5 text-green-500" title="Active" />
                   ) : (
-                    <XCircle className="h-5 w-5 text-gray-400" />
+                    <div className="flex items-center gap-1">
+                      <XCircle className="h-5 w-5 text-gray-400" title="Archived" />
+                      <span className="text-xs px-2 py-0.5 bg-gray-200 text-gray-600 rounded">Archived</span>
+                    </div>
                   )}
                 </div>
 
