@@ -10,7 +10,7 @@
  * - Trend analysis and forecasting
  */
 
-import { Transaction, Insight } from '@/models';
+import { Transaction, Insight, Restaurant, Task } from '@/models';
 import { Types } from 'mongoose';
 
 export interface IOwnerAnalytics {
@@ -97,7 +97,7 @@ export async function calculateOwnerAnalytics(
     transactionDate: { $gte: startDate, $lte: endDate }
   }).lean();
 
-  const totalRevenue = transactions.reduce((sum, t) => sum + ((t as any).totals?.total || 0), 0);
+  const totalRevenue = transactions.reduce((sum, t) => sum + (t.totalAmount || 0), 0);
   const totalTransactions = transactions.length;
   const averageTicket = totalTransactions > 0 ? totalRevenue / totalTransactions : 0;
 
@@ -111,7 +111,7 @@ export async function calculateOwnerAnalytics(
     transactionDate: { $gte: prevStart, $lte: prevEnd }
   }).lean();
 
-  const prevRevenue = prevTransactions.reduce((sum, t) => sum + ((t as any).totals?.total || 0), 0);
+  const prevRevenue = prevTransactions.reduce((sum, t) => sum + (t.totalAmount || 0), 0);
   const revenueChange = prevRevenue > 0 ? ((totalRevenue - prevRevenue) / prevRevenue) * 100 : 0;
 
   // Revenue by day
@@ -120,31 +120,44 @@ export async function calculateOwnerAnalytics(
     if (!acc[date]) {
       acc[date] = { date: new Date(t.transactionDate), amount: 0 };
     }
-    acc[date].amount += (t as any).totals?.total || 0;
+    acc[date].amount += t.totalAmount || 0;
     return acc;
   }, {} as Record<string, { date: Date; amount: number }>);
 
   // Revenue by channel
   const byChannel = transactions.reduce((acc, t) => {
-    const channel = (t as any).orderType || 'dine-in';
+    const channel = t.orderType || 'dine_in';
     if (!acc[channel]) {
       acc[channel] = { channel, amount: 0, count: 0 };
     }
-    acc[channel].amount += (t as any).totals?.total || 0;
+    acc[channel].amount += t.totalAmount || 0;
     acc[channel].count += 1;
     return acc;
   }, {} as Record<string, { channel: string; amount: number; count: number }>);
 
   // Revenue by employee
   const byEmployee = transactions.reduce((acc, t) => {
-    const employeeId = (t as any).employee?.id || 'unknown';
-    const employeeName = (t as any).employee?.name || 'Unknown';
+    const employeeId = t.employee?.id || 'unknown';
+    const employeeName = t.employee?.name || 'Unknown';
     if (!acc[employeeId]) {
       acc[employeeId] = { employeeId, name: employeeName, amount: 0 };
     }
-    acc[employeeId].amount += (t as any).totals?.total || 0;
+    acc[employeeId].amount += t.totalAmount || 0;
     return acc;
   }, {} as Record<string, { employeeId: string; name: string; amount: number }>);
+
+  // Fetch restaurant to get team data
+  const restaurant = await Restaurant.findById(restaurantId);
+
+  // Employee stats from Restaurant.team.employees
+  const employees = restaurant?.team?.employees || [];
+  const totalEmployees = employees.length + 1; // +1 for owner
+  const activeEmployees = employees.filter((emp: any) => emp.isActive !== false).length + 1;
+
+  // Gamification stats from employee data
+  const totalPointsAwarded = employees.reduce((sum: number, emp: any) => sum + (emp.points || 0), 0) + (restaurant?.owner?.points || 0);
+  const allBadges = employees.reduce((badges: string[], emp: any) => [...badges, ...(emp.badges || [])], []);
+  const badgesUnlocked = allBadges.length;
 
   // Fetch AI insights
   const insights = await Insight.find({
@@ -156,19 +169,29 @@ export async function calculateOwnerAnalytics(
   const highPriorityCount = insights.filter(i => i.priority === 'high').length;
   const totalOpportunity = insights.reduce((sum, i) => sum + (i.lostRevenue?.total || 0), 0);
 
-  // TODO: Employee stats when Employee collection exists
-  const totalEmployees = 1; // At least the owner
-  const activeEmployees = 1;
+  // Task stats from Task model
+  const tasks = await Task.find({
+    restaurantId: new Types.ObjectId(restaurantId),
+    createdAt: { $gte: startDate, $lte: endDate }
+  });
 
-  // TODO: Task stats when Task model exists
-  const totalTasks = 0;
-  const completedTasks = 0;
-  const overdueCount = 0;
-  const activeWorkflows = 0;
+  const totalTasks = tasks.length;
+  const completedTasks = tasks.filter(t => t.status === 'completed').length;
+  const now = new Date();
+  const overdueCount = tasks.filter(t =>
+    t.status === 'pending' &&
+    t.completedAt &&
+    new Date(t.completedAt) < now
+  ).length;
 
-  // TODO: Gamification stats
-  const totalPointsAwarded = 0;
-  const badgesUnlocked = 0;
+  // Calculate average completion time
+  const completedTasksWithTime = tasks.filter(t => t.status === 'completed' && t.completionTime);
+  const avgCompletionTime = completedTasksWithTime.length > 0
+    ? completedTasksWithTime.reduce((sum, t) => sum + (t.completionTime || 0), 0) / completedTasksWithTime.length
+    : 0;
+
+  // Active workflows - count unique workflowIds from active tasks
+  const activeWorkflows = new Set(tasks.filter(t => t.status === 'pending').map(t => t.workflowId.toString())).size;
 
   return {
     restaurantId,
@@ -201,13 +224,13 @@ export async function calculateOwnerAnalytics(
       totalTasks,
       completedTasks,
       completionRate: totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0,
-      averageCompletionTime: 0,
+      averageCompletionTime: Math.round(avgCompletionTime),
       overdueCount,
       activeWorkflows
     },
     gamification: {
       totalPointsAwarded,
-      averagePoints: totalEmployees > 0 ? totalPointsAwarded / totalEmployees : 0,
+      averagePoints: Math.round(totalEmployees > 0 ? totalPointsAwarded / totalEmployees : 0),
       badgesUnlocked,
       leaderboardTop5: []
     },

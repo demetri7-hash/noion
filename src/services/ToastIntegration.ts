@@ -624,9 +624,9 @@ export class ToastIntegrationService {
         totalAmount: check.totalAmount,
         payments,
         employee: {
-          id: toastTransaction.server?.guid || toastTransaction.createdEmployee?.guid || 'unknown',
-          name: undefined, // Toast doesn't provide employee names in transaction data
-          role: toastTransaction.server ? 'server' : 'cashier'
+          id: toastTransaction.server?.guid || 'unassigned',
+          name: toastTransaction.server?.guid ? undefined : (toastTransaction.source || 'System'),
+          role: toastTransaction.server ? 'server' : 'system'
         },
         timing: {
           orderStartedAt: new Date(toastTransaction.openedDate),

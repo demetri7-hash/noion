@@ -130,7 +130,8 @@ export async function GET(
     }
 
     todayTransactions.forEach(t => {
-      if (t.employee?.id) {
+      // Skip transactions with no employee attribution (invoices, system orders, etc.)
+      if (t.employee?.id && t.employee.id !== 'unknown' && t.employee.id !== 'unassigned') {
         const toastEmployeeId = t.employee.id;
         if (!staffPerformance[toastEmployeeId]) {
           // Look up imported staff data
