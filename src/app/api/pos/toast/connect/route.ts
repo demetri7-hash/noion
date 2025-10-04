@@ -4,6 +4,7 @@ import Restaurant, { POSSystemType } from '../../../../../models/Restaurant';
 import SyncJob from '../../../../../models/SyncJob';
 import { enqueueSyncJob } from '../../../../../lib/queue';
 import { encryptToastCredentials } from '../../../../../utils/toastEncryption';
+import connectDB from '../../../../../lib/mongodb';
 
 /**
  * POST /api/pos/toast/connect
@@ -23,6 +24,9 @@ export async function POST(request: NextRequest) {
   const { user } = authCheck;
 
   try {
+    // Connect to MongoDB
+    await connectDB();
+
     const body = await request.json();
     const { locationGuid, clientId, clientSecret } = body;
 
@@ -166,6 +170,9 @@ export async function GET(request: NextRequest) {
   const { user } = authCheck;
 
   try {
+    // Connect to MongoDB
+    await connectDB();
+
     const restaurant = await Restaurant.findById(user.restaurantId);
     if (!restaurant) {
       return NextResponse.json(
