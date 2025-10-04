@@ -94,6 +94,11 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
             name: result.data.name,
             restaurantName: result.data.restaurantName
           });
+
+          // Store restaurantId for dashboard
+          if (result.data.restaurantId) {
+            localStorage.setItem('restaurantId', result.data.restaurantId);
+          }
         }
       } catch (error) {
         console.error('Failed to load user profile:', error);

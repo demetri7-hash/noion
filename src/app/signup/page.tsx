@@ -71,6 +71,12 @@ export default function SignupPage() {
       if (data.success && data.data?.accessToken) {
         localStorage.setItem('authToken', data.data.accessToken);
         localStorage.setItem('token', data.data.accessToken);
+
+        // Store restaurantId for dashboard
+        if (data.data.user?._id) {
+          localStorage.setItem('restaurantId', data.data.user._id);
+        }
+
         // Redirect to POS connection after signup
         router.push('/pos');
       } else {
