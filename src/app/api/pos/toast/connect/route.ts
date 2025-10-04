@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authorize } from '../../../../../middleware/authorize';
-import Restaurant from '../../../../../models/Restaurant';
+import Restaurant, { POSSystemType } from '../../../../../models/Restaurant';
 import SyncJob from '../../../../../models/SyncJob';
 import { enqueueSyncJob } from '../../../../../lib/queue';
 import { encryptToastCredentials } from '../../../../../utils/toastEncryption';
@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
 
     // Update restaurant with encrypted credentials and POS config
     restaurant.posConfig = {
-      type: 'toast',
+      type: POSSystemType.TOAST,
       isConnected: false, // Will be set to true after first successful sync
       clientId: encryptedCredentials.clientId, // Store encrypted
       encryptedAccessToken: encryptedCredentials.clientSecret, // Store encrypted
@@ -174,7 +174,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const isConnected = restaurant.posConfig?.isConnected && restaurant.posConfig?.type === 'toast';
+    const isConnected = restaurant.posConfig?.isConnected && restaurant.posConfig?.type === POSSystemType.TOAST;
     const lastSyncAt = restaurant.posConfig?.lastSyncAt;
 
     return NextResponse.json({

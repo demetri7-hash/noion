@@ -4,6 +4,7 @@ import { AuthService } from '@/services/AuthService';
 import { decryptToastCredentials } from '@/utils/toastEncryption';
 import { enqueueSyncJob } from '@/lib/queue';
 import SyncJob from '@/models/SyncJob';
+import { POSSystemType } from '@/models/Restaurant';
 
 /**
  * POST /api/auth/login
@@ -91,7 +92,7 @@ async function handleAutoSync(user: any): Promise<void> {
   // Check if user has Toast POS configured
   const posConfig = user.posConfig;
 
-  if (!posConfig || posConfig.type !== 'toast') {
+  if (!posConfig || posConfig.type !== POSSystemType.TOAST) {
     return; // No Toast POS configured
   }
 
