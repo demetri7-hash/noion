@@ -1,24 +1,12 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import MainLayout from '../components/layout/MainLayout';
 import Link from 'next/link';
 import { BarChart3, MessageSquare, ListTodo, Users, Trophy, Zap } from 'lucide-react';
 
 export default function Home() {
-  const router = useRouter();
-
-  useEffect(() => {
-    // Check if user is logged in (client-side only)
-    if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('authToken');
-      if (token) {
-        // Redirect to dashboard if already logged in
-        router.push('/dashboard');
-      }
-    }
-  }, [router]);
+  // Note: Removed auto-redirect to fix client-side routing issues
+  // Users can manually navigate to /dashboard if logged in
 
   return (
     <MainLayout>
