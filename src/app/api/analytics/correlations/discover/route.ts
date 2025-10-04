@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { correlationEngine } from '../../../../../services/CorrelationEngine';
-import { verifyToken } from '../../../../../lib/auth';
+import { authorize } from '../../../../../middleware/authorize';
 
 /**
  * POST /api/analytics/correlations/discover
@@ -12,27 +12,14 @@ import { verifyToken } from '../../../../../lib/auth';
  * - endDate: ISO date string
  */
 export async function POST(request: NextRequest) {
+  // Check authorization
+  const authCheck = await authorize('analytics:team', 'read')(request);
+  if (authCheck instanceof NextResponse) return authCheck;
+
+  const { user } = authCheck;
+
   try {
-    // Verify authentication
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.substring(7);
-    const decoded = verifyToken(token);
-
-    if (!decoded || !decoded.restaurantId) {
-      return NextResponse.json(
-        { error: 'Invalid token' },
-        { status: 401 }
-      );
-    }
-
-    const restaurantId = decoded.restaurantId;
+    const restaurantId = user.restaurantId;
 
     // Get query params
     const { searchParams } = new URL(request.url);
