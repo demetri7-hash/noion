@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import MainLayout from '../../components/layout/MainLayout';
 import ToastConnectionWizard from '../../components/pos/ToastConnectionWizard';
-import { CheckCircle, AlertCircle, RefreshCw, Calendar } from 'lucide-react';
+import { CheckCircle, AlertCircle, RefreshCw, Calendar, Users, Download } from 'lucide-react';
 
 /**
  * POS Integration Page
@@ -13,6 +13,8 @@ export default function POSPage() {
   const [isConnected, setIsConnected] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<any>(null);
 
   useEffect(() => {
     checkConnectionStatus();
@@ -41,6 +43,42 @@ export default function POSPage() {
       console.error('Error checking connection status:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const importStaff = async () => {
+    try {
+      setImporting(true);
+      setImportResult(null);
+
+      const token = localStorage.getItem('authToken');
+      if (!token) return;
+
+      const response = await fetch('/api/pos/toast/import-staff', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        setImportResult(result);
+      } else {
+        setImportResult({
+          success: false,
+          error: result.error || 'Failed to import staff'
+        });
+      }
+    } catch (error) {
+      console.error('Error importing staff:', error);
+      setImportResult({
+        success: false,
+        error: 'Failed to import staff'
+      });
+    } finally {
+      setImporting(false);
     }
   };
 
@@ -120,10 +158,81 @@ export default function POSPage() {
                   </div>
                 </div>
 
-                <div className="bg-blue-50 border border-blue-200 rounded p-4">
+                <div className="bg-blue-50 border border-blue-200 rounded p-4 mb-6">
                   <p className="text-blue-700 text-sm">
                     ✨ Your Toast data syncs automatically on every login, pulling only new data since your last visit. No need to reconnect!
                   </p>
+                </div>
+
+                {/* Staff Import Section */}
+                <div className="border-t pt-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                        <Users className="w-5 h-5 mr-2" />
+                        Import Staff from Toast
+                      </h3>
+                      <p className="text-sm text-gray-600 mt-1">
+                        Import your Toast employees to link sales stats and enable gamification
+                      </p>
+                    </div>
+                    <button
+                      onClick={importStaff}
+                      disabled={importing}
+                      className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {importing ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                          Importing...
+                        </>
+                      ) : (
+                        <>
+                          <Download className="w-4 h-4 mr-2" />
+                          Import Staff
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Import Result */}
+                  {importResult && (
+                    <div className={`mt-4 p-4 rounded-lg ${
+                      importResult.success
+                        ? 'bg-green-50 border border-green-200'
+                        : 'bg-red-50 border border-red-200'
+                    }`}>
+                      {importResult.success ? (
+                        <>
+                          <p className="text-green-800 font-medium mb-2">
+                            ✅ Successfully imported {importResult.data?.totalImported} employees!
+                          </p>
+                          {importResult.data?.imported && importResult.data.imported.length > 0 && (
+                            <div className="text-sm text-green-700 space-y-1">
+                              <p className="font-medium">Imported staff:</p>
+                              <ul className="list-disc list-inside ml-2">
+                                {importResult.data.imported.map((staff: any, idx: number) => (
+                                  <li key={idx}>
+                                    {staff.name} - {staff.role}
+                                    {staff.email && ` (${staff.email})`}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          {importResult.data?.skipped && importResult.data.skipped.length > 0 && (
+                            <div className="text-sm text-yellow-700 mt-2">
+                              <p className="font-medium">Skipped {importResult.data.skipped.length} employees (already imported)</p>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <p className="text-red-800">
+                          ❌ {importResult.error}
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
-import { Transaction } from '@/models';
+import { Transaction, Restaurant } from '@/models';
 import mongoose from 'mongoose';
+import { find as findTimezone } from 'geo-tz';
+
+export const dynamic = 'force-dynamic';
 
 /**
  * GET /api/dashboard/today/[restaurantId]
@@ -17,28 +20,54 @@ export async function GET(
     const { restaurantId } = params;
     const restaurantObjectId = new mongoose.Types.ObjectId(restaurantId);
 
-    // Today's date range (midnight to now)
-    const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-    const todayEnd = now;
+    // Get restaurant to determine timezone from location
+    const restaurant = await Restaurant.findById(restaurantObjectId);
 
-    // Yesterday's date range (midnight to same time yesterday)
+    let timezone = 'America/Los_Angeles'; // Default to Pacific Time
+
+    if (restaurant?.location?.latitude && restaurant?.location?.longitude) {
+      try {
+        const timezones = findTimezone(restaurant.location.latitude, restaurant.location.longitude);
+        if (timezones && timezones.length > 0) {
+          timezone = timezones[0];
+        }
+      } catch (error) {
+        console.error('Timezone detection error:', error);
+      }
+    }
+
+    // Get current time in restaurant's timezone
+    const now = new Date();
+    const nowInRestaurantTZ = new Date(now.toLocaleString('en-US', { timeZone: timezone }));
+
+    // Today's date range (midnight to now in restaurant timezone)
+    const todayStart = new Date(nowInRestaurantTZ);
+    todayStart.setHours(0, 0, 0, 0);
+
+    // Convert back to UTC for database query
+    const todayStartUTC = new Date(todayStart.toLocaleString('en-US', { timeZone: 'UTC' }));
+    const todayEndUTC = now;
+
+    // Yesterday's date range (midnight to same time yesterday in restaurant timezone)
     const yesterdayStart = new Date(todayStart);
     yesterdayStart.setDate(yesterdayStart.getDate() - 1);
-    const yesterdayEnd = new Date(now);
-    yesterdayEnd.setDate(yesterdayEnd.getDate() - 1);
+    const yesterdayStartUTC = new Date(yesterdayStart.toLocaleString('en-US', { timeZone: 'UTC' }));
 
-    // Fetch today's transactions
+    const yesterdayEnd = new Date(nowInRestaurantTZ);
+    yesterdayEnd.setDate(yesterdayEnd.getDate() - 1);
+    const yesterdayEndUTC = new Date(yesterdayEnd.toLocaleString('en-US', { timeZone: 'UTC' }));
+
+    // Fetch today's transactions (using UTC dates for query)
     const todayTransactions = await Transaction.find({
       restaurantId: restaurantObjectId,
-      transactionDate: { $gte: todayStart, $lte: todayEnd },
+      transactionDate: { $gte: todayStartUTC, $lte: todayEndUTC },
       status: { $ne: 'voided' }
     }).lean();
 
     // Fetch yesterday's transactions (same time window)
     const yesterdayTransactions = await Transaction.find({
       restaurantId: restaurantObjectId,
-      transactionDate: { $gte: yesterdayStart, $lte: yesterdayEnd },
+      transactionDate: { $gte: yesterdayStartUTC, $lte: yesterdayEndUTC },
       status: { $ne: 'voided' }
     }).lean();
 
@@ -90,21 +119,42 @@ export async function GET(
     // Calculate top staff performance for today
     const staffPerformance: { [staffId: string]: any } = {};
 
+    // Build a map of Toast employee IDs to imported staff
+    const staffMap = new Map();
+    if (restaurant?.team?.employees) {
+      restaurant.team.employees.forEach((emp: any) => {
+        if (emp.toastEmployeeId) {
+          staffMap.set(emp.toastEmployeeId, emp);
+        }
+      });
+    }
+
     todayTransactions.forEach(t => {
       if (t.employee?.id) {
-        const staffId = t.employee.id;
-        if (!staffPerformance[staffId]) {
-          staffPerformance[staffId] = {
-            id: staffId,
-            name: t.employee.name || 'Unknown',
+        const toastEmployeeId = t.employee.id;
+        if (!staffPerformance[toastEmployeeId]) {
+          // Look up imported staff data
+          const importedStaff = staffMap.get(toastEmployeeId);
+
+          staffPerformance[toastEmployeeId] = {
+            id: toastEmployeeId,
+            name: importedStaff
+              ? `${importedStaff.firstName} ${importedStaff.lastName}`
+              : (t.employee.name || 'Unknown'),
+            email: importedStaff?.email || null,
+            role: importedStaff?.role || 'employee',
+            isImported: !!importedStaff,
             sales: 0,
             transactions: 0,
             avgTicket: 0,
-            hoursWorked: 0 // TODO: Calculate from shift data
+            hoursWorked: 0, // TODO: Calculate from shift data
+            // Gamification data if imported
+            points: importedStaff?.points || 0,
+            level: importedStaff?.level || 1
           };
         }
-        staffPerformance[staffId].sales += t.totalAmount || 0;
-        staffPerformance[staffId].transactions += 1;
+        staffPerformance[toastEmployeeId].sales += t.totalAmount || 0;
+        staffPerformance[toastEmployeeId].transactions += 1;
       }
     });
 
