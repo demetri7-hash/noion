@@ -1,12 +1,14 @@
 'use client';
 
-import React, { useEffect, Suspense } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import MainLayout from '../../components/layout/MainLayout';
 import AnalyticsDashboard from '../../components/dashboard/AnalyticsDashboard';
+import OwnerWarRoom from '../../components/dashboard/OwnerWarRoom';
 import { useSearchParams } from 'next/navigation';
 
 function DashboardContent() {
   const searchParams = useSearchParams();
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
     // Store restaurant ID from URL params if present
@@ -21,11 +23,27 @@ function DashboardContent() {
     if (posConnected === 'true') {
       console.log('✅ POS Connected! Data should be syncing now.');
     }
+
+    // Get user role from token
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('authToken');
+      if (token) {
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          setUserRole(payload.role);
+        } catch (e) {
+          console.error('Failed to parse token:', e);
+        }
+      }
+    }
   }, [searchParams]);
+
+  // Role-based dashboard routing
+  const isOwner = userRole === 'owner' || userRole === 'restaurant_owner';
 
   return (
     <MainLayout>
-      <AnalyticsDashboard />
+      {isOwner ? <OwnerWarRoom /> : <AnalyticsDashboard />}
     </MainLayout>
   );
 }
