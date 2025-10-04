@@ -160,6 +160,43 @@ export interface IAnalyticsSettings {
   reportFrequency: 'daily' | 'weekly' | 'monthly';
 }
 
+// Interface for imported employee data
+export interface IEmployee {
+  userId: string;                    // User ID (email or generated)
+  toastEmployeeId?: string;           // Toast employee GUID
+  email?: string;                     // Employee email
+  firstName: string;                  // First name
+  lastName: string;                   // Last name
+  role: UserRole | string;            // Employee role
+  phone?: string;                     // Phone number
+  isActive: boolean;                  // Active status
+
+  // Gamification fields
+  points: number;                     // Total points earned
+  level: number;                      // Current level (1-10)
+  streak: number;                     // Current streak (days)
+  badges?: string[];                  // Earned badges
+
+  // Toast-specific data
+  toastData?: {
+    externalId?: string;
+    chosenName?: string;
+    jobTitle?: string;
+    wage?: number;
+    createdDate?: string;
+    modifiedDate?: string;
+  };
+
+  // Metadata
+  importedAt?: Date;                  // When imported
+  importedFrom?: string;              // Source system (e.g., 'toast')
+}
+
+// Interface for team/employee management
+export interface ITeam {
+  employees?: IEmployee[];            // Array of imported employees
+}
+
 // Main Restaurant interface
 export interface IRestaurant extends Document {
   // Owner information
@@ -182,7 +219,10 @@ export interface IRestaurant extends Document {
   // Status and settings
   status: RestaurantStatus;
   analyticsSettings: IAnalyticsSettings;
-  
+
+  // Team and employee management
+  team?: ITeam;
+
   // Feature flags
   features: {
     discoveryReportSent: boolean;
@@ -346,11 +386,50 @@ const RestaurantSchema = new Schema<IRestaurant>({
   },
   
   // Status and settings
-  status: { 
-    type: String, 
+  status: {
+    type: String,
     enum: Object.values(RestaurantStatus),
     default: RestaurantStatus.TRIAL
   },
+
+  // Team and employee management
+  team: {
+    employees: [{
+      userId: { type: String, required: true },
+      toastEmployeeId: { type: String },
+      email: { type: String },
+      firstName: { type: String, required: true },
+      lastName: { type: String, required: true },
+      role: {
+        type: String,
+        enum: [...Object.values(UserRole), 'restaurant_owner', 'restaurant_manager', 'restaurant_staff'],
+        default: UserRole.EMPLOYEE
+      },
+      phone: { type: String },
+      isActive: { type: Boolean, default: true },
+
+      // Gamification fields
+      points: { type: Number, default: 0, min: 0 },
+      level: { type: Number, default: 1, min: 1, max: 10 },
+      streak: { type: Number, default: 0, min: 0 },
+      badges: [{ type: String }],
+
+      // Toast-specific data
+      toastData: {
+        externalId: { type: String },
+        chosenName: { type: String },
+        jobTitle: { type: String },
+        wage: { type: Number },
+        createdDate: { type: String },
+        modifiedDate: { type: String }
+      },
+
+      // Metadata
+      importedAt: { type: Date },
+      importedFrom: { type: String }
+    }]
+  },
+
   analyticsSettings: {
     timezone: { type: String, default: 'America/New_York' },
     businessHours: {
