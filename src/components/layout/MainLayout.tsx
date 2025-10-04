@@ -52,6 +52,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [mounted, setMounted] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   const router = useRouter();
   const pathname = usePathname();
@@ -212,6 +213,34 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     router.push('/login');
   };
 
+  const handleSyncToast = async () => {
+    try {
+      setSyncing(true);
+      const token = localStorage.getItem('authToken');
+      if (!token) return;
+
+      const response = await fetch('/api/pos/toast/sync', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        alert(result.message || 'Toast sync started successfully!');
+      } else {
+        alert(result.error || 'Failed to sync Toast data');
+      }
+    } catch (error) {
+      console.error('Sync error:', error);
+      alert('Failed to sync Toast data');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
       case 'owner':
@@ -306,7 +335,15 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         </nav>
 
         {/* Help section */}
-        <div className="absolute bottom-0 left-0 right-0 px-4 py-4 border-t border-gray-200 bg-white">
+        <div className="absolute bottom-0 left-0 right-0 px-4 py-4 border-t border-gray-200 bg-white space-y-1">
+          <button
+            onClick={handleSyncToast}
+            disabled={syncing}
+            className="w-full flex items-center px-3 py-2 text-sm font-medium text-blue-600 rounded-md hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <RefreshCw className={`mr-3 h-5 w-5 ${syncing ? 'animate-spin' : ''}`} />
+            {syncing ? 'Syncing...' : 'Sync Toast Data'}
+          </button>
           <button className="w-full flex items-center px-3 py-2 text-sm font-medium text-gray-600 rounded-md hover:bg-gray-50 hover:text-gray-900 transition-colors">
             <HelpCircle className="mr-3 h-5 w-5" />
             Help & Support

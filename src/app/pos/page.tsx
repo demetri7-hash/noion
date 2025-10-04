@@ -16,6 +16,7 @@ export default function POSPage() {
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<any>(null);
   const [disconnecting, setDisconnecting] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     checkConnectionStatus();
@@ -44,6 +45,37 @@ export default function POSPage() {
       console.error('Error checking connection status:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const refreshConnection = async () => {
+    try {
+      setRefreshing(true);
+      const token = localStorage.getItem('authToken');
+      if (!token) return;
+
+      // Trigger a manual sync which will refresh the connection
+      const response = await fetch('/api/pos/toast/sync', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        alert(result.message || 'Connection refreshed successfully!');
+        // Refresh connection status
+        await checkConnectionStatus();
+      } else {
+        const error = await response.json();
+        alert(error.error || 'Failed to refresh connection');
+      }
+    } catch (error) {
+      console.error('Error refreshing connection:', error);
+      alert('Failed to refresh connection');
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -193,18 +225,35 @@ export default function POSPage() {
 
                 <div className="bg-blue-50 border border-blue-200 rounded p-4 mb-6">
                   <p className="text-blue-700 text-sm">
-                    ✨ Your Toast data syncs automatically on every login, pulling only new data since your last visit. No need to reconnect!
+                    ✨ Your Toast data syncs automatically on every login, pulling only new data since your last visit.
                   </p>
                 </div>
 
-                {/* Disconnect Button */}
-                <div className="mb-6">
+                {/* Connection Actions */}
+                <div className="mb-6 flex items-center gap-4">
+                  <button
+                    onClick={refreshConnection}
+                    disabled={refreshing}
+                    className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {refreshing ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                        Refreshing...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        Refresh Connection
+                      </>
+                    )}
+                  </button>
                   <button
                     onClick={disconnectPOS}
                     disabled={disconnecting}
                     className="text-sm text-red-600 hover:text-red-700 underline disabled:opacity-50"
                   >
-                    {disconnecting ? 'Disconnecting...' : 'Disconnect Toast POS'}
+                    {disconnecting ? 'Disconnecting...' : 'Disconnect'}
                   </button>
                 </div>
 
