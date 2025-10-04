@@ -50,12 +50,20 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const [user, setUser] = useState<User | null>(null);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [mounted, setMounted] = useState(false);
 
   const router = useRouter();
   const pathname = usePathname();
 
-  // Load user data
+  // Set mounted state (client-side only)
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Load user data (only after component is mounted on client)
+  useEffect(() => {
+    if (!mounted) return;
+
     const token = localStorage.getItem('authToken');
     if (!token) {
       router.push('/login');
@@ -77,7 +85,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       console.error('Invalid token:', error);
       router.push('/login');
     }
-  }, [router]);
+  }, [router, mounted]);
 
   // Role-based navigation
   const getNavigation = (): NavItem[] => {
@@ -203,7 +211,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     }
   };
 
-  if (!user) {
+  // Show loading state during SSR and initial client load
+  if (!mounted || !user) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>

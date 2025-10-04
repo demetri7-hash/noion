@@ -1,11 +1,12 @@
 'use client';
 
+import MainLayout from '@/components/layout/MainLayout';
 import Link from 'next/link';
 import { BarChart3, MessageSquare, ListTodo, Users, Trophy, Zap } from 'lucide-react';
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
+    <MainLayout>
       <div className="max-w-7xl mx-auto space-y-12">
         {/* Hero Section */}
         <div className="text-center">
@@ -108,6 +109,6 @@ export default function Home() {
           </Link>
         </div>
       </div>
-    </div>
+    </MainLayout>
   );
 }

@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 /**
  * Leaderboards API
  * GET /api/v2/leaderboards?type=daily|weekly|monthly|all-time

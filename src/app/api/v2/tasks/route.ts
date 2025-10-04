@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 /**
  * Tasks API
  * GET /api/v2/tasks - List tasks

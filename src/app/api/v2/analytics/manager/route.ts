@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 /**
  * Manager Analytics API
  *
