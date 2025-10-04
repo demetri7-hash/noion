@@ -189,7 +189,8 @@ export class CorrelationEngine {
 
     console.log(`Fetching weather data for ${dailyRevenue.size} days...`);
 
-    for (const [dateKey, dayData] of dailyRevenue.entries()) {
+    // Convert Map entries to array for TypeScript compatibility
+    for (const [dateKey, dayData] of Array.from(dailyRevenue.entries())) {
       try {
         const timestamp = dayData.date.getTime();
 
