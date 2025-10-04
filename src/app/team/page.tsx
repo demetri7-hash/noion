@@ -380,10 +380,10 @@ export default function TeamPage() {
                     </div>
                   </div>
                   {member.isActive ? (
-                    <CheckCircle className="h-5 w-5 text-green-500" title="Active" />
+                    <CheckCircle className="h-5 w-5 text-green-500" />
                   ) : (
                     <div className="flex items-center gap-1">
-                      <XCircle className="h-5 w-5 text-gray-400" title="Archived" />
+                      <XCircle className="h-5 w-5 text-gray-400" />
                       <span className="text-xs px-2 py-0.5 bg-gray-200 text-gray-600 rounded">Archived</span>
                     </div>
                   )}

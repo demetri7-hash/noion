@@ -154,11 +154,19 @@ async function processSyncJob(job: Job<SyncJobData>) {
  * Create and start the worker
  */
 function startWorker() {
+  const redisConnection = getRedisConnection();
+
+  if (!redisConnection) {
+    console.error('❌ Redis connection not available. Worker cannot start.');
+    console.error('Please set REDIS_URL environment variable.');
+    process.exit(1);
+  }
+
   const worker = new Worker<SyncJobData>(
     QUEUE_NAME,
     processSyncJob,
     {
-      connection: getRedisConnection(),
+      connection: redisConnection,
       concurrency: 5, // Process up to 5 jobs simultaneously
       limiter: {
         max: 10, // Max 10 jobs

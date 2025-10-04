@@ -183,7 +183,7 @@ export async function POST(request: NextRequest) {
     // Save imported employees to database
     await Restaurant.updateOne(
       { _id: user.restaurantId },
-      { $set: { 'team.employees': restaurant.team.employees } }
+      { $set: { 'team.employees': restaurant.team?.employees || [] } }
     );
 
     console.log(`✅ Imported ${importedStaff.length} employees from Toast for restaurant ${user.restaurantId}`);
