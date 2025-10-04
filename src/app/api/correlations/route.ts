@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '../../../lib/mongodb';
 import Correlation from '../../../models/Correlation';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/correlations
  * Fetch AI-discovered correlations for a restaurant

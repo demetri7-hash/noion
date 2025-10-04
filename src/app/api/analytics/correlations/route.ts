@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { authorize } from '../../../../middleware/authorize';
 import Correlation from '../../../../models/Correlation';

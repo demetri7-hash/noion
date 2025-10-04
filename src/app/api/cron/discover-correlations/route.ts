@@ -3,6 +3,8 @@ import mongoose from 'mongoose';
 import Restaurant from '../../../../models/Restaurant';
 import { correlationEngine } from '../../../../services/CorrelationEngine';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * Cron Job: Nightly Correlation Discovery
  * Runs daily at 2 AM (configured in vercel.json)
