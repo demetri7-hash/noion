@@ -23,7 +23,8 @@ import {
   TrendingUp,
   Award,
   UserCircle,
-  Briefcase
+  Briefcase,
+  Link as LinkIcon
 } from 'lucide-react';
 import { UserRole } from '@/models/Restaurant';
 
@@ -70,21 +71,37 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       return;
     }
 
-    try {
-      // Decode JWT to get user info (simple base64 decode)
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      setUser({
-        id: payload.userId,
-        email: payload.email,
-        role: payload.role,
-        restaurantId: payload.restaurantId,
-        name: payload.email.split('@')[0], // Fallback name
-        restaurantName: 'My Restaurant'
-      });
-    } catch (error) {
-      console.error('Invalid token:', error);
-      router.push('/login');
-    }
+    // Fetch full user profile from API
+    const fetchUserProfile = async () => {
+      try {
+        const response = await fetch('/api/auth/me', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch user profile');
+        }
+
+        const result = await response.json();
+        if (result.success && result.data) {
+          setUser({
+            id: result.data.id,
+            email: result.data.email,
+            role: result.data.role,
+            restaurantId: result.data.restaurantId,
+            name: result.data.name,
+            restaurantName: result.data.restaurantName
+          });
+        }
+      } catch (error) {
+        console.error('Failed to load user profile:', error);
+        router.push('/login');
+      }
+    };
+
+    fetchUserProfile();
   }, [router, mounted]);
 
   // Role-based navigation
@@ -133,6 +150,16 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         href: '/team',
         icon: Users,
         roles: ['owner', 'admin', 'manager']
+      });
+    }
+
+    // POS Integration
+    if (role === 'owner' || role === 'restaurant_owner' || role === 'admin') {
+      baseNav.push({
+        name: 'POS Connect',
+        href: '/pos',
+        icon: LinkIcon,
+        roles: ['owner', 'admin']
       });
     }
 

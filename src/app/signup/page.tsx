@@ -71,7 +71,8 @@ export default function SignupPage() {
       if (data.success && data.data?.accessToken) {
         localStorage.setItem('authToken', data.data.accessToken);
         localStorage.setItem('token', data.data.accessToken);
-        router.push('/dashboard');
+        // Redirect to POS connection after signup
+        router.push('/pos');
       } else {
         throw new Error('Invalid response from server');
       }
