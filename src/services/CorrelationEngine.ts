@@ -319,7 +319,7 @@ export class CorrelationEngine {
       // Test if pattern holds true with new data
       const isValid = await this.testPattern(pattern, transactions);
 
-      await pattern.validate(isValid);
+      await (pattern as any).updateValidation(isValid);
 
       if (isValid) validated++;
       else invalidated++;

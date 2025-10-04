@@ -190,7 +190,7 @@ export class MenuAnalyticsService {
     const opportunities: UpsellOpportunity[] = [];
 
     // For each popular item, find its common companions
-    for (const [itemName, item] of menuItems) {
+    for (const [itemName, item] of Array.from(menuItems.entries())) {
       if (item.frequency < 10) continue; // Need minimum data
 
       const companions = itemPairs.get(itemName);
@@ -346,7 +346,7 @@ Expected Results:
     const bundles: MenuInsights['bundleOpportunities'] = [];
 
     // Look for items that are frequently ordered with multiple other items
-    for (const [itemName, companions] of itemPairs) {
+    for (const [itemName, companions] of Array.from(itemPairs.entries())) {
       const item = menuItems.get(itemName);
       if (!item) continue;
 

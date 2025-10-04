@@ -89,10 +89,11 @@ export class LocationService {
       }
 
       // Get access token
-      const accessToken = this.decryptToastToken(restaurant.posConfig.encryptedAccessToken);
-      if (!accessToken) {
+      const encryptedToken = restaurant.posConfig.encryptedAccessToken;
+      if (!encryptedToken) {
         return null;
       }
+      const accessToken = this.decryptToastToken(encryptedToken);
 
       // Fetch restaurant info from Toast
       const response = await axios.get(`${this.toastBaseUrl}/restaurants/v1/restaurants`, {
@@ -179,8 +180,8 @@ export class LocationService {
 
     return {
       restaurantId,
-      latitude: location.coordinates?.latitude || 0,
-      longitude: location.coordinates?.longitude || 0,
+      latitude: location.latitude || 0,
+      longitude: location.longitude || 0,
       address: location.address || '',
       city: location.city || '',
       state: location.state || '',
@@ -297,10 +298,8 @@ export class LocationService {
   ): Promise<void> {
     await Restaurant.findByIdAndUpdate(restaurantId, {
       $set: {
-        'location.coordinates': {
-          latitude,
-          longitude
-        }
+        'location.latitude': latitude,
+        'location.longitude': longitude
       }
     });
   }

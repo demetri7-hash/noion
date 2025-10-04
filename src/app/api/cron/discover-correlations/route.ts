@@ -51,16 +51,17 @@ export async function GET(request: NextRequest) {
     // Process each restaurant
     for (const restaurant of restaurants) {
       try {
+        const restaurantId = String(restaurant._id);
         console.log(`Processing ${restaurant.name}...`);
 
         const result = await correlationEngine.discoverCorrelations(
-          restaurant._id.toString(),
+          restaurantId,
           startDate,
           endDate
         );
 
         // Contribute to global learning
-        await correlationEngine.contributeToGlobalLearning(restaurant._id.toString());
+        await correlationEngine.contributeToGlobalLearning(restaurantId);
 
         results.processed++;
         results.totalCorrelations += result.correlations.length;

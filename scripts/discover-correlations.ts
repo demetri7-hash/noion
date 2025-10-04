@@ -51,11 +51,12 @@ async function discoverCorrelationsForAllRestaurants() {
     // Process each restaurant
     for (const restaurant of restaurants) {
       try {
-        console.log(`\n--- Processing ${restaurant.name} (${restaurant._id}) ---`);
+        const restaurantId = String(restaurant._id);
+        console.log(`\n--- Processing ${restaurant.name} (${restaurantId}) ---`);
 
         // Discover correlations
         const result = await correlationEngine.discoverCorrelations(
-          restaurant._id.toString(),
+          restaurantId,
           startDate,
           endDate
         );
@@ -66,7 +67,7 @@ async function discoverCorrelationsForAllRestaurants() {
         console.log(`  Patterns invalidated: ${result.patternsInvalidated}`);
 
         // Contribute to global learning
-        await correlationEngine.contributeToGlobalLearning(restaurant._id.toString());
+        await correlationEngine.contributeToGlobalLearning(restaurantId);
         console.log(`  ✓ Contributed to global learning`);
 
         // Update totals

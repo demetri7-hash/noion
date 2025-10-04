@@ -124,6 +124,24 @@ export interface ICorrelation extends Document {
   updatedAt: Date;
 }
 
+// Model interface with static methods
+export interface ICorrelationModel extends mongoose.Model<ICorrelation> {
+  findActivePatterns(
+    type?: CorrelationType,
+    scope?: string,
+    minConfidence?: number
+  ): Promise<ICorrelation[]>;
+
+  findForRestaurant(
+    restaurantId: string,
+    region: string,
+    cuisineType: string,
+    type?: CorrelationType
+  ): Promise<ICorrelation[]>;
+
+  getMostReliable(limit?: number): Promise<ICorrelation[]>;
+}
+
 const CorrelationSchema = new Schema<ICorrelation>({
   // Scope
   scope: {
@@ -248,7 +266,7 @@ CorrelationSchema.virtual('reliabilityScore').get(function(this: ICorrelation) {
 });
 
 // Instance methods
-CorrelationSchema.methods.validate = function(this: ICorrelation, wasCorrect: boolean) {
+CorrelationSchema.methods.updateValidation = function(this: ICorrelation, wasCorrect: boolean) {
   if (wasCorrect) {
     this.learning.timesValidated++;
   } else {
@@ -398,6 +416,6 @@ CorrelationSchema.statics.getMostReliable = function(limit: number = 20) {
   ]);
 };
 
-// Export model
-export default (mongoose.models.Correlation as mongoose.Model<ICorrelation>) ||
-  mongoose.model<ICorrelation>('Correlation', CorrelationSchema);
+// Export model with proper typing
+export default (mongoose.models.Correlation as ICorrelationModel) ||
+  mongoose.model<ICorrelation, ICorrelationModel>('Correlation', CorrelationSchema);
