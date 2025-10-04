@@ -22,9 +22,25 @@ export async function POST(request: NextRequest) {
 
     const restaurant = await Restaurant.findById(user.restaurantId);
 
-    if (!restaurant || !restaurant.posConfig?.clientId) {
+    if (!restaurant) {
       return NextResponse.json(
-        { error: 'Toast POS not configured' },
+        { error: 'Restaurant not found' },
+        { status: 404 }
+      );
+    }
+
+    // Validate Toast POS configuration exists
+    if (!restaurant.posConfig?.clientId || !restaurant.posConfig?.encryptedClientSecret || !restaurant.posConfig?.locationId) {
+      console.error('Missing Toast credentials:', {
+        hasClientId: !!restaurant.posConfig?.clientId,
+        hasEncryptedSecret: !!restaurant.posConfig?.encryptedClientSecret,
+        hasLocationId: !!restaurant.posConfig?.locationId
+      });
+      return NextResponse.json(
+        {
+          error: 'Toast POS not fully configured. Please reconnect to Toast POS.',
+          details: 'Missing encrypted credentials. Go to POS page to reconnect.'
+        },
         { status: 400 }
       );
     }
@@ -32,8 +48,8 @@ export async function POST(request: NextRequest) {
     // Decrypt Toast credentials
     const credentials = decryptToastCredentials({
       clientId: restaurant.posConfig.clientId,
-      encryptedClientSecret: restaurant.posConfig.encryptedClientSecret!,
-      locationId: restaurant.posConfig.locationId!
+      encryptedClientSecret: restaurant.posConfig.encryptedClientSecret,
+      locationId: restaurant.posConfig.locationId
     });
 
     // Get Toast access token

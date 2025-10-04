@@ -42,6 +42,7 @@ interface POSConnection {
   isConnected: boolean;
   posType?: string;
   locationId?: string;
+  hasRequiredCredentials?: boolean;
 }
 
 export default function TeamPage() {
@@ -101,7 +102,8 @@ export default function TeamPage() {
           setPosConnection({
             isConnected: data.data.isConnected,
             posType: data.data.posType,
-            locationId: data.data.locationId
+            locationId: data.data.locationId,
+            hasRequiredCredentials: data.data.hasRequiredCredentials
           });
         }
       }
@@ -247,23 +249,29 @@ export default function TeamPage() {
             </p>
           </div>
           {posConnection.isConnected && posConnection.posType === 'toast' && (
-            <button
-              onClick={importStaffFromToast}
-              disabled={importing}
-              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-            >
-              {importing ? (
-                <>
-                  <RefreshCw className="h-5 w-5 mr-2 animate-spin" />
-                  Importing...
-                </>
-              ) : (
-                <>
-                  <Download className="h-5 w-5 mr-2" />
-                  Import from Toast
-                </>
-              )}
-            </button>
+            posConnection.hasRequiredCredentials ? (
+              <button
+                onClick={importStaffFromToast}
+                disabled={importing}
+                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+              >
+                {importing ? (
+                  <>
+                    <RefreshCw className="h-5 w-5 mr-2 animate-spin" />
+                    Importing...
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-5 w-5 mr-2" />
+                    Import from Toast
+                  </>
+                )}
+              </button>
+            ) : (
+              <div className="text-sm text-red-600 bg-red-50 px-4 py-2 rounded-lg border border-red-200">
+                ⚠️ Toast credentials incomplete. Please reconnect on the POS page.
+              </div>
+            )
           )}
         </div>
 

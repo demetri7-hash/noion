@@ -184,6 +184,13 @@ export async function GET(request: NextRequest) {
     const isConnected = restaurant.posConfig?.isConnected && restaurant.posConfig?.type === POSSystemType.TOAST;
     const lastSyncAt = restaurant.posConfig?.lastSyncAt;
 
+    // Check if credentials are properly configured for import
+    const hasRequiredCredentials = !!(
+      restaurant.posConfig?.clientId &&
+      restaurant.posConfig?.encryptedClientSecret &&
+      restaurant.posConfig?.locationId
+    );
+
     return NextResponse.json({
       success: true,
       data: {
@@ -191,7 +198,13 @@ export async function GET(request: NextRequest) {
         posType: restaurant.posConfig?.type,
         lastSyncAt: lastSyncAt?.toISOString(),
         locationId: restaurant.posConfig?.locationId,
-        syncInterval: restaurant.posConfig?.syncInterval || 'manual'
+        syncInterval: restaurant.posConfig?.syncInterval || 'manual',
+        hasRequiredCredentials,
+        debug: {
+          hasClientId: !!restaurant.posConfig?.clientId,
+          hasEncryptedSecret: !!restaurant.posConfig?.encryptedClientSecret,
+          hasLocationId: !!restaurant.posConfig?.locationId
+        }
       }
     });
 
