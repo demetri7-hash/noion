@@ -75,7 +75,7 @@ export async function GET(
 
 /**
  * PUT /api/v2/users/[id]
- * Update user
+ * Update user (owner or imported employee)
  */
 export async function PUT(
   request: NextRequest,
@@ -99,48 +99,94 @@ export async function PUT(
       return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 });
     }
 
-    // For now, only owner exists
-    if (id !== String(restaurant._id)) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    // Check if updating owner
+    if (id === String(restaurant._id)) {
+      // Check permission - can update own profile or has admin permission
+      const isOwnProfile = requestingUser.userId === restaurant.owner.email;
+      if (!isOwnProfile) {
+        const permCheck = await authorize('users:all', 'update')(request);
+        if (permCheck instanceof NextResponse) return permCheck;
+      }
+
+      // Update owner fields (only if provided)
+      if (firstName) restaurant.owner.firstName = firstName;
+      if (lastName) restaurant.owner.lastName = lastName;
+      if (phone) restaurant.owner.phone = phone;
+
+      // Role, points, level, streak - admin only
+      if (!isOwnProfile || requestingUser.role === UserRole.ADMIN || requestingUser.role === UserRole.OWNER) {
+        if (role) restaurant.owner.role = role;
+        if (typeof isActive === 'boolean') restaurant.owner.isActive = isActive;
+        if (typeof points === 'number') restaurant.owner.points = points;
+        if (typeof level === 'number') restaurant.owner.level = level;
+        if (typeof streak === 'number') restaurant.owner.streak = streak;
+      }
+
+      await restaurant.save();
+
+      const updatedUser = {
+        id: restaurant._id,
+        email: restaurant.owner.email,
+        firstName: restaurant.owner.firstName,
+        lastName: restaurant.owner.lastName,
+        role: restaurant.owner.role,
+        phone: restaurant.owner.phone,
+        isActive: restaurant.owner.isActive,
+        points: restaurant.owner.points,
+        level: restaurant.owner.level,
+        streak: restaurant.owner.streak,
+      };
+
+      return NextResponse.json({ success: true, user: updatedUser });
     }
 
-    // Check permission - can update own profile or has admin permission
-    const isOwnProfile = requestingUser.userId === restaurant.owner.email;
-    if (!isOwnProfile) {
-      const permCheck = await authorize('users:all', 'update')(request);
-      if (permCheck instanceof NextResponse) return permCheck;
+    // Check if updating imported employee
+    if (restaurant.team?.employees) {
+      const employeeIndex = restaurant.team.employees.findIndex(
+        (emp: any) => String(emp._id) === id || emp.userId === id
+      );
+
+      if (employeeIndex !== -1) {
+        // Require admin/owner permission to update team members
+        const permCheck = await authorize('users:all', 'update')(request);
+        if (permCheck instanceof NextResponse) return permCheck;
+
+        const employee = restaurant.team.employees[employeeIndex];
+
+        // Update employee fields (only if provided)
+        if (firstName) employee.firstName = firstName;
+        if (lastName) employee.lastName = lastName;
+        if (phone) employee.phone = phone;
+        if (role) employee.role = role; // Allow changing role, discarding Toast role
+        if (typeof isActive === 'boolean') employee.isActive = isActive;
+        if (typeof points === 'number') employee.points = points;
+        if (typeof level === 'number') employee.level = level;
+        if (typeof streak === 'number') employee.streak = streak;
+
+        await restaurant.save();
+
+        const updatedEmployee = {
+          id: String(employee._id) || employee.userId,
+          userId: employee.userId,
+          toastEmployeeId: employee.toastEmployeeId,
+          email: employee.email,
+          firstName: employee.firstName,
+          lastName: employee.lastName,
+          role: employee.role,
+          phone: employee.phone,
+          isActive: employee.isActive,
+          points: employee.points,
+          level: employee.level,
+          streak: employee.streak,
+          badges: employee.badges,
+        };
+
+        return NextResponse.json({ success: true, user: updatedEmployee });
+      }
     }
 
-    // Update fields (only if provided)
-    if (firstName) restaurant.owner.firstName = firstName;
-    if (lastName) restaurant.owner.lastName = lastName;
-    if (phone) restaurant.owner.phone = phone;
-
-    // Role, points, level, streak - admin only
-    if (!isOwnProfile || requestingUser.role === UserRole.ADMIN || requestingUser.role === UserRole.OWNER) {
-      if (role) restaurant.owner.role = role;
-      if (typeof isActive === 'boolean') restaurant.owner.isActive = isActive;
-      if (typeof points === 'number') restaurant.owner.points = points;
-      if (typeof level === 'number') restaurant.owner.level = level;
-      if (typeof streak === 'number') restaurant.owner.streak = streak;
-    }
-
-    await restaurant.save();
-
-    const updatedUser = {
-      id: restaurant._id,
-      email: restaurant.owner.email,
-      firstName: restaurant.owner.firstName,
-      lastName: restaurant.owner.lastName,
-      role: restaurant.owner.role,
-      phone: restaurant.owner.phone,
-      isActive: restaurant.owner.isActive,
-      points: restaurant.owner.points,
-      level: restaurant.owner.level,
-      streak: restaurant.owner.streak,
-    };
-
-    return NextResponse.json({ success: true, user: updatedUser });
+    // User not found
+    return NextResponse.json({ error: 'User not found' }, { status: 404 });
   } catch (error) {
     console.error('Update user error:', error);
     return NextResponse.json({ error: 'Failed to update user' }, { status: 500 });

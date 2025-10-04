@@ -51,6 +51,7 @@ export default function TeamPage() {
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<any>(null);
   const [posConnection, setPosConnection] = useState<POSConnection>({ isConnected: false });
+  const [updatingRoleFor, setUpdatingRoleFor] = useState<string | null>(null);
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -142,6 +143,38 @@ export default function TeamPage() {
       });
     } finally {
       setImporting(false);
+    }
+  };
+
+  const updateMemberRole = async (memberId: string, newRole: string) => {
+    try {
+      setUpdatingRoleFor(memberId);
+
+      const token = localStorage.getItem('authToken');
+      if (!token) return;
+
+      const response = await fetch(`/api/v2/users/${memberId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ role: newRole })
+      });
+
+      if (response.ok) {
+        // Refresh team members list
+        await fetchTeamMembers();
+      } else {
+        const error = await response.json();
+        console.error('Failed to update role:', error);
+        alert(`Failed to update role: ${error.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error updating role:', error);
+      alert('Failed to update role');
+    } finally {
+      setUpdatingRoleFor(null);
     }
   };
 
@@ -328,15 +361,37 @@ export default function TeamPage() {
                   )}
                 </div>
 
-                {/* Role Badge */}
+                {/* Role Selector/Badge */}
                 <div className="mb-4">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleBadgeColor(member.role)}`}>
-                    {member.role}
-                  </span>
-                  {member.isImported && (
-                    <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                      Imported from {member.importedFrom}
+                  {member.role !== 'owner' ? (
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={member.role}
+                        onChange={(e) => updateMemberRole(member.id, e.target.value)}
+                        disabled={updatingRoleFor === member.id}
+                        className={`px-2.5 py-1 rounded-full text-xs font-medium border-0 ${getRoleBadgeColor(member.role)} ${
+                          updatingRoleFor === member.id ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                        }`}
+                      >
+                        <option value="admin">Admin</option>
+                        <option value="manager">Manager</option>
+                        <option value="employee">Employee</option>
+                      </select>
+                      {updatingRoleFor === member.id && (
+                        <RefreshCw className="h-3 w-3 animate-spin text-blue-600" />
+                      )}
+                    </div>
+                  ) : (
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleBadgeColor(member.role)}`}>
+                      {member.role}
                     </span>
+                  )}
+                  {member.isImported && member.toastData?.jobTitle && (
+                    <div className="mt-1">
+                      <span className="text-xs text-gray-500">
+                        Toast Role: {member.toastData.jobTitle}
+                      </span>
+                    </div>
                   )}
                 </div>
 
