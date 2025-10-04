@@ -1,13 +1,38 @@
 'use client';
 
-import MainLayout from '@/components/layout/MainLayout';
 import Link from 'next/link';
 import { BarChart3, MessageSquare, ListTodo, Users, Trophy, Zap } from 'lucide-react';
 
 export default function Home() {
   return (
-    <MainLayout>
-      <div className="max-w-7xl mx-auto space-y-12">
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">NOION Analytics</h1>
+              <p className="text-sm text-gray-500">Restaurant Intelligence Platform</p>
+            </div>
+            <div className="flex gap-4">
+              <Link
+                href="/dashboard"
+                className="px-4 py-2 text-blue-600 hover:text-blue-700 font-medium"
+              >
+                Sign In
+              </Link>
+              <Link
+                href="/dashboard"
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium"
+              >
+                Get Started
+              </Link>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-12">
         {/* Hero Section */}
         <div className="text-center">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
@@ -109,6 +134,15 @@ export default function Home() {
           </Link>
         </div>
       </div>
-    </MainLayout>
+
+      {/* Footer */}
+      <footer className="bg-white border-t border-gray-200 mt-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <p className="text-center text-gray-500">
+            © 2025 NOION Analytics. All rights reserved.
+          </p>
+        </div>
+      </footer>
+    </div>
   );
 }
