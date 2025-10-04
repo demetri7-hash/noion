@@ -23,6 +23,14 @@ export async function POST(req: NextRequest) {
     const authService = new AuthService();
     const result = await authService.login(email, password);
 
+    // Check if login was successful
+    if (!result.success) {
+      return NextResponse.json(
+        { error: result.message || 'Invalid credentials' },
+        { status: 401 }
+      );
+    }
+
     const response = NextResponse.json({
       success: true,
       message: 'Login successful',
