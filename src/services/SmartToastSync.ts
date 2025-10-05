@@ -37,7 +37,7 @@ export interface SyncProgress {
   totalImported: number;
   percentComplete: number;
   estimatedTimeRemaining: number; // minutes
-  status: 'estimating' | 'syncing' | 'complete' | 'error';
+  status: 'idle' | 'syncing' | 'completed' | 'error';
   message?: string;
 }
 
@@ -338,7 +338,9 @@ export class SmartToastSync {
     // Helper to update progress (both callback and database)
     const updateProgress = async (progress: SyncProgress) => {
       // Call the callback if provided
-      await updateProgress(progress);
+      if (progressCallback) {
+        progressCallback(progress);
+      }
 
       // Save to database for UI display
       await Restaurant.findByIdAndUpdate(restaurantId, {
@@ -570,7 +572,7 @@ export class SmartToastSync {
       totalImported,
       percentComplete: 100,
       estimatedTimeRemaining: 0,
-      status: 'complete',
+      status: 'completed',
       message: `Initial sync complete! Imported ${totalImported.toLocaleString()} transactions.`
     };
 
@@ -663,7 +665,7 @@ export class SmartToastSync {
         totalImported: imported,
         percentComplete: 100,
         estimatedTimeRemaining: 0,
-        status: 'complete',
+        status: 'completed',
         message: `Incremental sync complete! Imported ${imported} new transactions.`
       });
     }

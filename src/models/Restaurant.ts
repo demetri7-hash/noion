@@ -348,7 +348,24 @@ const RestaurantSchema = new Schema<IRestaurant>({
     webhookSecret: { type: String },
     locationId: { type: String },
     managementGroupId: { type: String },
-    initialSyncComplete: { type: Boolean, default: false }
+    initialSyncComplete: { type: Boolean, default: false },
+    syncProgress: {
+      status: {
+        type: String,
+        enum: ['idle', 'syncing', 'completed', 'error'],
+        default: 'idle'
+      },
+      currentChunk: { type: Number, default: 0 },
+      totalChunks: { type: Number, default: 0 },
+      percentComplete: { type: Number, default: 0 },
+      transactionsImported: { type: Number, default: 0 },
+      estimatedTimeRemaining: { type: Number, default: 0 },
+      message: { type: String, default: 'No sync in progress' },
+      startedAt: { type: Date },
+      lastUpdatedAt: { type: Date },
+      completedAt: { type: Date },
+      error: { type: String }
+    }
   },
   
   // Subscription and billing

@@ -1,12 +1,16 @@
 {
   "permissions": {
     "allow": [
-      "Bash(DATABASE_URL='mongodb+srv://demetri7_db_user:L9THnfRUfAWnmggK@noion-cluster.wsnmmhg.mongodb.net/noion' npx tsx scripts/analyze-upsell-opportunities.ts 68e0bd8a603ef36c8257e021)",
-      "Bash(DATABASE_URL='mongodb+srv://demetri7_db_user:L9THnfRUfAWnmggK@noion-cluster.wsnmmhg.mongodb.net/noion' npx tsx scripts/test-weekly-challenge.ts 68e0bd8a603ef36c8257e021)",
-      "Bash(DATABASE_URL='mongodb+srv://demetri7_db_user:L9THnfRUfAWnmggK@noion-cluster.wsnmmhg.mongodb.net/noion' npx tsx scripts/check-restaurant-data.ts 68e0bd8a603ef36c8257e021)",
-      "Bash(DATABASE_URL='mongodb+srv://demetri7_db_user:L9THnfRUfAWnmggK@noion-cluster.wsnmmhg.mongodb.net/noion' ENCRYPTION_KEY='m3n4o5p6q7r8_production_encryption_key' npx tsx scripts/sync-employee-status.ts 68e0bd8a603ef36c8257e021)",
-      "Bash(DATABASE_URL='mongodb+srv://demetri7_db_user:L9THnfRUfAWnmggK@noion-cluster.wsnmmhg.mongodb.net/noion' ENCRYPTION_KEY='m3n4o5p6q7r8_production_encryption_key' npx tsx scripts/fix-employee-status.ts 68e0bd8a603ef36c8257e021)",
-      "Bash(DATABASE_URL='mongodb+srv://demetri7_db_user:L9THnfRUfAWnmggK@noion-cluster.wsnmmhg.mongodb.net/noion' npx tsx -e \"\nimport mongoose from ''mongoose'';\nimport { Transaction } from ''./src/models/index.js'';\n\nasync function checkTransactions() {\n  await mongoose.connect(process.env.DATABASE_URL);\n  \n  const sample = await Transaction.findOne({ \n    restaurantId: ''68e0bd8a603ef36c8257e021'' \n  }).lean();\n  \n  console.log(''Sample transaction:'');\n  console.log(''ID:'', sample?._id);\n  console.log(''Date:'', sample?.transactionDate);\n  console.log(''Total:'', sample?.total);\n  console.log(''Amount:'', sample?.amount);\n  console.log(''Revenue:'', sample?.revenue);\n  console.log(''Keys:'', Object.keys(sample || {}));\n  \n  await mongoose.disconnect();\n}\n\ncheckTransactions();\n\")"
+      "Bash(DATABASE_URL='mongodb+srv://demetri7_db_user:L9THnfRUfAWnmggK@noion-cluster.wsnmmhg.mongodb.net/noion' npx tsx scripts/discover-correlations.ts)",
+      "Bash(DATABASE_URL='mongodb+srv://demetri7_db_user:L9THnfRUfAWnmggK@noion-cluster.wsnmmhg.mongodb.net/noion' OPENWEATHER_API_KEY='bfcb0efd46ff675c5da542bcd138f2da' TICKETMASTER_API_KEY='6CAbXYWtXxADpKR9dDDFCrIqdjUzT41Q' npx tsx scripts/discover-correlations.ts)",
+      "WebFetch(domain:open-meteo.com)",
+      "Bash(DATABASE_URL='mongodb+srv://demetri7_db_user:L9THnfRUfAWnmggK@noion-cluster.wsnmmhg.mongodb.net/noion' TICKETMASTER_API_KEY='6CAbXYWtXxADpKR9dDDFCrIqdjUzT41Q' npx tsx scripts/discover-correlations.ts)",
+      "Bash(python3:*)",
+      "Bash(DATABASE_URL='mongodb+srv://demetri7_db_user:L9THnfRUfAWnmggK@noion-cluster.wsnmmhg.mongodb.net/noion' npx tsx scripts/test-internal-patterns.ts 68e0bd8a603ef36c8257e021)",
+      "Bash(DATABASE_URL='mongodb+srv://demetri7_db_user:L9THnfRUfAWnmggK@noion-cluster.wsnmmhg.mongodb.net/noion' npx tsx scripts/test-predictions.ts 68e0bd8a603ef36c8257e021)",
+      "Bash(DATABASE_URL='mongodb+srv://demetri7_db_user:L9THnfRUfAWnmggK@noion-cluster.wsnmmhg.mongodb.net/noion' TICKETMASTER_API_KEY='6CAbXYWtXxADpKR9dDDFCrIqdjUzT41Q' npx tsx scripts/test-enhanced-external-data.ts 68e0bd8a603ef36c8257e021)",
+      "Bash(DATABASE_URL='mongodb+srv://demetri7_db_user:L9THnfRUfAWnmggK@noion-cluster.wsnmmhg.mongodb.net/noion' npx tsx scripts/run-smart-toast-sync.ts 68e0bd8a603ef36c8257e021)",
+      "Bash(DATABASE_URL='mongodb+srv://demetri7_db_user:L9THnfRUfAWnmggK@noion-cluster.wsnmmhg.mongodb.net/noion' ENCRYPTION_KEY='m3n4o5p6q7r8_production_encryption_key' npx tsx scripts/run-smart-toast-sync.ts 68e0bd8a603ef36c8257e021)"
     ],
     "deny": [],
     "ask": []

@@ -16,6 +16,7 @@ import {
   CreditCard,
   Zap
 } from 'lucide-react';
+import ToastSyncProgress from '@/components/pos/ToastSyncProgress';
 
 // Navigation items
 interface INavItem {
@@ -30,6 +31,7 @@ interface IUser {
   name: string;
   email: string;
   restaurant: string;
+  restaurantId: string;
   plan: string;
 }
 
@@ -49,6 +51,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     name: 'John Smith',
     email: 'john@restaurant.com',
     restaurant: 'The Golden Spoon',
+    restaurantId: '68e0bd8a603ef36c8257e021', // TODO: Get from actual auth context
     plan: 'Intelligence'
   };
 
@@ -158,6 +161,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             Help & Support
           </button>
         </div>
+
+        {/* Toast sync progress */}
+        <ToastSyncProgress restaurantId={user.restaurantId} />
       </div>
 
       {/* Main content */}

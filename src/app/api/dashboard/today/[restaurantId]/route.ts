@@ -139,7 +139,7 @@ export async function GET(
 
         // Fetch time entries for today
         const timeEntries = await toastIntegration.fetchTimeEntries(
-          credentials,
+          restaurantId,
           todayStartUTC,
           todayEndUTC
         );
