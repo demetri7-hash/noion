@@ -30,6 +30,15 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { locationGuid, clientId, clientSecret } = body;
 
+    console.log('Connect request body:', {
+      hasLocationGuid: !!locationGuid,
+      hasClientId: !!clientId,
+      hasClientSecret: !!clientSecret,
+      locationGuidLength: locationGuid?.length,
+      clientIdLength: clientId?.length,
+      clientSecretLength: clientSecret?.length
+    });
+
     // Validate inputs
     if (!locationGuid || !clientId || !clientSecret) {
       return NextResponse.json(
@@ -61,6 +70,14 @@ export async function POST(request: NextRequest) {
       clientId,
       clientSecret,
       locationGuid
+    });
+
+    console.log('Encrypted credentials:', {
+      hasClientId: !!encryptedCredentials.clientId,
+      hasClientSecret: !!encryptedCredentials.clientSecret,
+      hasLocationGuid: !!encryptedCredentials.locationGuid,
+      clientIdLength: encryptedCredentials.clientId?.length,
+      clientSecretLength: encryptedCredentials.clientSecret?.length
     });
 
     // Determine sync date range
@@ -121,7 +138,26 @@ export async function POST(request: NextRequest) {
       isActive: true
     };
 
+    console.log('About to save posConfig:', {
+      type: restaurant.posConfig.type,
+      hasClientId: !!restaurant.posConfig.clientId,
+      hasEncryptedClientSecret: !!restaurant.posConfig.encryptedClientSecret,
+      hasLocationId: !!restaurant.posConfig.locationId,
+      clientIdValue: restaurant.posConfig.clientId?.substring(0, 20) + '...',
+      encryptedClientSecretValue: restaurant.posConfig.encryptedClientSecret?.substring(0, 20) + '...',
+      locationIdValue: restaurant.posConfig.locationId
+    });
+
     await restaurant.save();
+
+    // Re-fetch to verify
+    const savedRestaurant = await Restaurant.findById(restaurant._id);
+    console.log('After save verification:', {
+      hasClientId: !!savedRestaurant?.posConfig?.clientId,
+      hasEncryptedClientSecret: !!savedRestaurant?.posConfig?.encryptedClientSecret,
+      hasLocationId: !!savedRestaurant?.posConfig?.locationId,
+      encryptedClientSecretValue: savedRestaurant?.posConfig?.encryptedClientSecret?.substring(0, 20) + '...'
+    });
 
     console.log(`✅ Toast connection initiated for restaurant ${user.restaurantId}`);
     console.log(`   Job ID: ${jobId}`);

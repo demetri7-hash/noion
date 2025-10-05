@@ -35,6 +35,10 @@ export async function POST(request: NextRequest) {
       hasEncryptedSecret: !!restaurant.posConfig?.encryptedClientSecret,
       hasLocationId: !!restaurant.posConfig?.locationId,
       locationId: restaurant.posConfig?.locationId,
+      clientIdValue: restaurant.posConfig?.clientId?.substring(0, 20) + '...',
+      encryptedSecretValue: restaurant.posConfig?.encryptedClientSecret?.substring(0, 20) + '...',
+      encryptedSecretType: typeof restaurant.posConfig?.encryptedClientSecret,
+      encryptedSecretLength: restaurant.posConfig?.encryptedClientSecret?.length,
       posConfigKeys: restaurant.posConfig ? Object.keys(restaurant.posConfig) : []
     });
 
