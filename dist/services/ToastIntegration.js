@@ -343,26 +343,29 @@ class ToastIntegrationService {
                 throw new Error('No check data found in transaction');
             }
             // Calculate items
-            const items = check.selections.map(selection => ({
-                id: selection.guid,
-                name: selection.item?.entityType || 'Unknown Item',
-                category: 'General', // Toast doesn't always provide category
-                quantity: selection.quantity,
-                unitPrice: selection.price / selection.quantity,
-                totalPrice: selection.price,
-                modifiers: selection.modifiers?.map(mod => ({
-                    id: mod.guid,
-                    name: mod.modifier?.entityType || 'Unknown Modifier',
-                    price: 0 // Toast doesn't always provide modifier price
-                })) || [],
-                discounts: selection.appliedDiscounts?.map(discount => ({
-                    id: discount.guid,
-                    name: discount.discount?.entityType || 'Unknown Discount',
-                    type: 'fixed',
-                    value: discount.discountAmount,
-                    amount: discount.discountAmount
-                })) || []
-            }));
+            const items = check.selections.map(selection => {
+                const sel = selection; // Toast API has more fields than our type definition
+                return {
+                    id: sel.guid,
+                    name: sel.displayName || sel.item?.entityType || 'Unknown Item',
+                    category: sel.salesCategory?.name || 'General',
+                    quantity: sel.quantity,
+                    unitPrice: sel.price / sel.quantity,
+                    totalPrice: sel.price,
+                    modifiers: sel.modifiers?.map((mod) => ({
+                        id: mod.guid,
+                        name: mod.displayName || mod.item?.entityType || 'Unknown Modifier',
+                        price: mod.price || 0
+                    })) || [],
+                    discounts: sel.appliedDiscounts?.map((discount) => ({
+                        id: discount.guid,
+                        name: discount.displayName || discount.discount?.entityType || 'Unknown Discount',
+                        type: 'fixed',
+                        value: discount.discountAmount,
+                        amount: discount.discountAmount
+                    })) || []
+                };
+            });
             // Calculate payments
             const payments = check.payments.map(payment => {
                 let tipPercentage = 0;
