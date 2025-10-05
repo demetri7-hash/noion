@@ -105,6 +105,22 @@ export interface IPOSConfig {
   webhookSecret?: string;
   locationId?: string;                // For multi-location POS systems (Toast GUID)
   managementGroupId?: string;         // For Toast specifically
+  initialSyncComplete?: boolean;      // Has full historical sync been completed?
+
+  // Sync Progress Tracking (for UI display)
+  syncProgress?: {
+    status: 'idle' | 'syncing' | 'completed' | 'error';
+    currentChunk: number;
+    totalChunks: number;
+    percentComplete: number;
+    transactionsImported: number;
+    estimatedTimeRemaining: number; // minutes
+    message: string;
+    startedAt: Date;
+    lastUpdatedAt: Date;
+    completedAt?: Date;
+    error?: string;
+  };
 }
 
 // Interface for subscription information
@@ -331,7 +347,8 @@ const RestaurantSchema = new Schema<IRestaurant>({
     webhookUrl: { type: String },
     webhookSecret: { type: String },
     locationId: { type: String },
-    managementGroupId: { type: String }
+    managementGroupId: { type: String },
+    initialSyncComplete: { type: Boolean, default: false }
   },
   
   // Subscription and billing

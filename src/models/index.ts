@@ -12,6 +12,11 @@ export { default as AuditLog } from './AuditLog';
 export { default as PointsHistory } from './PointsHistory';
 export { default as Badge } from './Badge';
 export { default as UserBadge } from './UserBadge';
+export { default as TimeEntry } from './TimeEntry';
+export { default as Job } from './Job';
+export { default as Shift } from './Shift';
+export { default as Menu } from './Menu';
+export { default as MenuItem } from './MenuItem';
 
 // Export types and enums
 export type { IRestaurant } from './Restaurant';
@@ -27,6 +32,11 @@ export type { IAuditLog } from './AuditLog';
 export type { IPointsHistory } from './PointsHistory';
 export type { IBadge } from './Badge';
 export type { IUserBadge } from './UserBadge';
+export type { ITimeEntry } from './TimeEntry';
+export type { IJob } from './Job';
+export type { IShift } from './Shift';
+export type { IMenu, IMenuGroup } from './Menu';
+export type { IMenuItem, IModifier, IPriceHistoryEntry } from './MenuItem';
 
 export { RestaurantType, POSSystemType, SubscriptionTier, RestaurantStatus, UserRole } from './Restaurant';
 export { InsightType, InsightCategory, InsightPriority, InsightStatus } from './Insight';

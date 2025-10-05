@@ -737,34 +737,301 @@ export class ToastIntegrationService {
    */
   async importTransactions(restaurantId: string, toastTransactions: IToastTransaction[]): Promise<number> {
     const { Transaction } = await import('../models');
-    let importedCount = 0;
 
-    for (const toastTransaction of toastTransactions) {
-      try {
-        // Check if transaction already exists
-        const existingTransaction = await Transaction.findOne({
-          restaurantId: restaurantId,
-          posTransactionId: toastTransaction.guid
-        });
+    if (toastTransactions.length === 0) {
+      return 0;
+    }
 
-        if (existingTransaction) {
-          continue; // Skip if already imported
+    console.log(`  📦 Batch importing ${toastTransactions.length} transactions...`);
+
+    // Prepare bulk write operations (upsert = insert if new, skip if exists)
+    const bulkOps = toastTransactions.map(toastTransaction => {
+      const normalizedData = this.normalizeTransaction(toastTransaction, restaurantId);
+
+      return {
+        updateOne: {
+          filter: {
+            restaurantId: restaurantId,
+            posTransactionId: toastTransaction.guid
+          },
+          update: { $setOnInsert: normalizedData },
+          upsert: true
         }
+      };
+    });
 
-        // Normalize and save transaction
-        const normalizedData = this.normalizeTransaction(toastTransaction, restaurantId);
-        const transaction = new Transaction(normalizedData);
-        await transaction.save();
-        importedCount++;
+    // Process in batches of 1000 (MongoDB optimal batch size)
+    const batchSize = 1000;
+    let totalInserted = 0;
+    let totalUpdated = 0;
 
-      } catch (error) {
-        console.error(`Failed to import transaction ${toastTransaction.guid}:`, error);
-        // Continue with next transaction
+    for (let i = 0; i < bulkOps.length; i += batchSize) {
+      const batch = bulkOps.slice(i, i + batchSize);
+
+      try {
+        const result = await Transaction.bulkWrite(batch, { ordered: false });
+        totalInserted += result.upsertedCount || 0;
+        totalUpdated += result.modifiedCount || 0;
+
+        console.log(`    ✓ Batch ${Math.floor(i / batchSize) + 1}: ${result.upsertedCount} new, ${batch.length - (result.upsertedCount || 0)} duplicates skipped`);
+      } catch (error: any) {
+        // Even with errors, some documents may have been inserted
+        console.error(`    ⚠️  Batch ${Math.floor(i / batchSize) + 1} had errors:`, error.message);
+        // Continue with next batch
       }
     }
 
-    console.log(`Imported ${importedCount} new transactions (${toastTransactions.length - importedCount} duplicates skipped)`);
-    return importedCount;
+    console.log(`  ✅ Import complete: ${totalInserted} new transactions, ${toastTransactions.length - totalInserted} duplicates skipped`);
+    return totalInserted;
+  }
+
+  /**
+   * Import jobs (positions/roles) into database using bulk operations
+   */
+  async importJobs(restaurantId: string, toastJobs: any[]): Promise<number> {
+    const Job = (await import('../models/Job')).default;
+
+    if (toastJobs.length === 0) {
+      return 0;
+    }
+
+    console.log(`  📦 Batch importing ${toastJobs.length} jobs...`);
+
+    const bulkOps = toastJobs.map(job => ({
+      updateOne: {
+        filter: {
+          restaurantId: restaurantId,
+          toastJobGuid: job.guid
+        },
+        update: {
+          $set: {
+            title: job.title || job.name || 'Unknown',
+            description: job.description,
+            defaultWage: job.defaultWage || 0,
+            tipEligible: job.tippable || false,
+            isActive: !job.deleted,
+            createdDate: job.createdDate ? new Date(job.createdDate) : new Date(),
+            modifiedDate: job.modifiedDate ? new Date(job.modifiedDate) : new Date()
+          }
+        },
+        upsert: true
+      }
+    }));
+
+    try {
+      const result = await Job.bulkWrite(bulkOps, { ordered: false });
+      console.log(`  ✅ Jobs import: ${result.upsertedCount} new, ${result.modifiedCount} updated`);
+      return result.upsertedCount || 0;
+    } catch (error: any) {
+      console.error(`  ⚠️  Jobs import error:`, error.message);
+      return 0;
+    }
+  }
+
+  /**
+   * Import time entries into database using bulk operations
+   */
+  async importTimeEntries(restaurantId: string, toastTimeEntries: any[]): Promise<number> {
+    const TimeEntry = (await import('../models/TimeEntry')).default;
+
+    if (toastTimeEntries.length === 0) {
+      return 0;
+    }
+
+    console.log(`  📦 Batch importing ${toastTimeEntries.length} time entries...`);
+
+    const bulkOps = toastTimeEntries.map(entry => ({
+      updateOne: {
+        filter: {
+          restaurantId: restaurantId,
+          toastTimeEntryGuid: entry.guid
+        },
+        update: {
+          $setOnInsert: {
+            restaurantId: restaurantId,
+            toastTimeEntryGuid: entry.guid,
+            employeeId: null, // TODO: Map to Employee model
+            employeeToastGuid: entry.employeeGuid || entry.employee?.guid,
+            jobId: null, // TODO: Map to Job model
+            jobToastGuid: entry.jobGuid || entry.job?.guid,
+            clockInTime: new Date(entry.inDate || entry.clockInTime),
+            clockOutTime: entry.outDate ? new Date(entry.outDate) : null,
+            breakDuration: entry.breakDuration || 0,
+            regularHours: entry.regularHours || 0,
+            overtimeHours: entry.overtimeHours || 0,
+            doubleOvertimeHours: entry.doubleOvertimeHours || 0,
+            hourlyWage: entry.hourlyWage || 0,
+            tipsEarned: entry.tips || 0,
+            businessDate: new Date(entry.businessDate),
+            createdDate: new Date(entry.createdDate || entry.inDate),
+            modifiedDate: new Date(entry.modifiedDate || entry.inDate),
+            totalHours: (entry.regularHours || 0) + (entry.overtimeHours || 0) + (entry.doubleOvertimeHours || 0),
+            totalPay: 0 // Will be calculated by pre-save hook
+          }
+        },
+        upsert: true
+      }
+    }));
+
+    try {
+      const result = await TimeEntry.bulkWrite(bulkOps, { ordered: false });
+      console.log(`  ✅ Time entries import: ${result.upsertedCount} new`);
+      return result.upsertedCount || 0;
+    } catch (error: any) {
+      console.error(`  ⚠️  Time entries import error:`, error.message);
+      return 0;
+    }
+  }
+
+  /**
+   * Import shifts into database using bulk operations
+   */
+  async importShifts(restaurantId: string, toastShifts: any[]): Promise<number> {
+    const Shift = (await import('../models/Shift')).default;
+
+    if (toastShifts.length === 0) {
+      return 0;
+    }
+
+    console.log(`  📦 Batch importing ${toastShifts.length} shifts...`);
+
+    const bulkOps = toastShifts.map(shift => ({
+      updateOne: {
+        filter: {
+          restaurantId: restaurantId,
+          toastShiftGuid: shift.guid
+        },
+        update: {
+          $setOnInsert: {
+            restaurantId: restaurantId,
+            toastShiftGuid: shift.guid,
+            employeeId: null, // TODO: Map to Employee model
+            employeeToastGuid: shift.employeeGuid || shift.employee?.guid,
+            jobId: null, // TODO: Map to Job model
+            jobToastGuid: shift.jobGuid || shift.job?.guid,
+            scheduledStart: new Date(shift.inDate || shift.startDate),
+            scheduledEnd: new Date(shift.outDate || shift.endDate),
+            businessDate: new Date(shift.businessDate),
+            actualTimeEntryId: null,
+            createdDate: new Date(shift.createdDate || shift.inDate),
+            modifiedDate: new Date(shift.modifiedDate || shift.inDate)
+          }
+        },
+        upsert: true
+      }
+    }));
+
+    try {
+      const result = await Shift.bulkWrite(bulkOps, { ordered: false });
+      console.log(`  ✅ Shifts import: ${result.upsertedCount} new`);
+      return result.upsertedCount || 0;
+    } catch (error: any) {
+      console.error(`  ⚠️  Shifts import error:`, error.message);
+      return 0;
+    }
+  }
+
+  /**
+   * Import menus into database using bulk operations
+   */
+  async importMenus(restaurantId: string, toastMenus: any[]): Promise<number> {
+    const Menu = (await import('../models/Menu')).default;
+
+    if (toastMenus.length === 0) {
+      return 0;
+    }
+
+    console.log(`  📦 Batch importing ${toastMenus.length} menus...`);
+
+    const bulkOps = toastMenus.map(menu => ({
+      updateOne: {
+        filter: {
+          restaurantId: restaurantId,
+          toastMenuGuid: menu.guid
+        },
+        update: {
+          $set: {
+            name: menu.name,
+            description: menu.description,
+            groups: (menu.groups || []).map((g: any) => ({
+              toastGroupGuid: g.guid,
+              name: g.name,
+              items: (g.items || []).map((i: any) => i.guid || i)
+            })),
+            isActive: !menu.deleted,
+            lastSyncedAt: new Date()
+          }
+        },
+        upsert: true
+      }
+    }));
+
+    try {
+      const result = await Menu.bulkWrite(bulkOps, { ordered: false });
+      console.log(`  ✅ Menus import: ${result.upsertedCount} new, ${result.modifiedCount} updated`);
+      return result.upsertedCount || 0;
+    } catch (error: any) {
+      console.error(`  ⚠️  Menus import error:`, error.message);
+      return 0;
+    }
+  }
+
+  /**
+   * Import menu items into database using bulk operations
+   */
+  async importMenuItems(restaurantId: string, toastMenuItems: any[]): Promise<number> {
+    const MenuItem = (await import('../models/MenuItem')).default;
+
+    if (toastMenuItems.length === 0) {
+      return 0;
+    }
+
+    console.log(`  📦 Batch importing ${toastMenuItems.length} menu items...`);
+
+    const bulkOps = toastMenuItems.map(item => ({
+      updateOne: {
+        filter: {
+          restaurantId: restaurantId,
+          toastItemGuid: item.guid
+        },
+        update: {
+          $set: {
+            name: item.name,
+            description: item.description,
+            sku: item.sku,
+            price: item.price || item.unitPrice || 0,
+            taxRate: item.taxRate,
+            category: item.masterCategory || item.salesCategory || 'Uncategorized',
+            isActive: !item.deleted,
+            modifiers: (item.modifiers || []).map((m: any) => ({
+              toastModifierGuid: m.guid,
+              name: m.name,
+              price: m.price || 0,
+              default: m.default || false
+            })),
+            lastSyncedAt: new Date()
+          },
+          $addToSet: {
+            priceHistory: {
+              $each: [{
+                price: item.price || item.unitPrice || 0,
+                effectiveDate: new Date()
+              }]
+            }
+          }
+        },
+        upsert: true
+      }
+    }));
+
+    try {
+      const result = await MenuItem.bulkWrite(bulkOps, { ordered: false });
+      console.log(`  ✅ Menu items import: ${result.upsertedCount} new, ${result.modifiedCount} updated`);
+      return result.upsertedCount || 0;
+    } catch (error: any) {
+      console.error(`  ⚠️  Menu items import error:`, error.message);
+      return 0;
+    }
   }
 
   /**
@@ -861,30 +1128,39 @@ export class ToastIntegrationService {
    * Fetch employee time entries (hours worked) from Toast Labor API
    */
   async fetchTimeEntries(
-    credentials: IToastCredentials,
+    restaurantId: string,
     startDate: Date,
     endDate: Date
   ): Promise<any[]> {
     try {
-      // Get access token
+      const restaurant = await Restaurant.findById(restaurantId);
+      if (!restaurant || !restaurant.posConfig.isConnected) {
+        throw new Error('Restaurant not connected to Toast');
+      }
+
+      // Re-authenticate to get fresh access token
+      const { decryptToastCredentials } = await import('../utils/toastEncryption');
+      const credentials = decryptToastCredentials({
+        clientId: restaurant.posConfig.clientId,
+        encryptedClientSecret: restaurant.posConfig.encryptedClientSecret,
+        locationId: restaurant.posConfig.locationId
+      });
+
       const authResponse = await this.authenticateRestaurant(credentials);
       const accessToken = authResponse.token.accessToken;
 
-      // Format dates for Toast API (ISO 8601)
-      const startDateStr = startDate.toISOString();
-      const endDateStr = endDate.toISOString();
-
-      // Make API request to get time entries
-      const response = await axios.get(
-        `${TOAST_BASE_URL}/labor/v1/timeEntries`,
+      // Toast Labor API uses modifiedStartDate/modifiedEndDate for time entries
+      // Can query up to 30 days at a time
+      const response = await this.client.get(
+        `/labor/v1/timeEntries`,
         {
-          params: {
-            startDate: startDateStr,
-            endDate: endDateStr
-          },
           headers: {
             'Authorization': `Bearer ${accessToken}`,
-            'Toast-Restaurant-External-ID': credentials.locationGuid
+            'Toast-Restaurant-External-ID': restaurant.posConfig.locationId
+          },
+          params: {
+            modifiedStartDate: startDate.toISOString(),
+            modifiedEndDate: endDate.toISOString()
           }
         }
       );
@@ -892,6 +1168,212 @@ export class ToastIntegrationService {
       return response.data || [];
     } catch (error: any) {
       console.error('Failed to fetch time entries from Toast:', error.response?.data || error.message);
+      return [];
+    }
+  }
+
+  /**
+   * Fetch job positions/roles from Toast Labor API
+   */
+  async fetchJobs(restaurantId: string): Promise<any[]> {
+    try {
+      const restaurant = await Restaurant.findById(restaurantId);
+      if (!restaurant || !restaurant.posConfig.isConnected) {
+        throw new Error('Restaurant not connected to Toast');
+      }
+
+      const { decryptToastCredentials } = await import('../utils/toastEncryption');
+      const credentials = decryptToastCredentials({
+        clientId: restaurant.posConfig.clientId,
+        encryptedClientSecret: restaurant.posConfig.encryptedClientSecret,
+        locationId: restaurant.posConfig.locationId
+      });
+
+      const authResponse = await this.authenticateRestaurant(credentials);
+      const accessToken = authResponse.token.accessToken;
+
+      const response = await this.client.get(
+        `/labor/v1/jobs`,
+        {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Toast-Restaurant-External-ID': restaurant.posConfig.locationId
+          }
+        }
+      );
+
+      return response.data || [];
+    } catch (error: any) {
+      console.error('Failed to fetch jobs from Toast:', error.response?.data || error.message);
+      return [];
+    }
+  }
+
+  /**
+   * Fetch scheduled shifts from Toast Labor API
+   */
+  async fetchShifts(
+    restaurantId: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<any[]> {
+    try {
+      const restaurant = await Restaurant.findById(restaurantId);
+      if (!restaurant || !restaurant.posConfig.isConnected) {
+        throw new Error('Restaurant not connected to Toast');
+      }
+
+      const { decryptToastCredentials } = await import('../utils/toastEncryption');
+      const credentials = decryptToastCredentials({
+        clientId: restaurant.posConfig.clientId,
+        encryptedClientSecret: restaurant.posConfig.encryptedClientSecret,
+        locationId: restaurant.posConfig.locationId
+      });
+
+      const authResponse = await this.authenticateRestaurant(credentials);
+      const accessToken = authResponse.token.accessToken;
+
+      // Shifts are queried by business date, need to iterate through date range
+      const allShifts: any[] = [];
+      let currentDate = new Date(startDate);
+      const finalDate = new Date(endDate);
+
+      while (currentDate <= finalDate) {
+        try {
+          const response = await this.client.get(
+            `/labor/v1/shifts`,
+            {
+              headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Toast-Restaurant-External-ID': restaurant.posConfig.locationId
+              },
+              params: {
+                businessDate: currentDate.toISOString().split('T')[0] // YYYY-MM-DD format
+              }
+            }
+          );
+
+          if (response.data && response.data.length > 0) {
+            allShifts.push(...response.data);
+          }
+
+          // Move to next day
+          currentDate.setDate(currentDate.getDate() + 1);
+
+          // Small delay to respect rate limits
+          await new Promise(resolve => setTimeout(resolve, 200));
+        } catch (error) {
+          console.error(`Failed to fetch shifts for ${currentDate.toISOString().split('T')[0]}:`, error);
+          // Continue with next date
+          currentDate.setDate(currentDate.getDate() + 1);
+        }
+      }
+
+      return allShifts;
+    } catch (error: any) {
+      console.error('Failed to fetch shifts from Toast:', error.response?.data || error.message);
+      return [];
+    }
+  }
+
+  /**
+   * Fetch menu structures from Toast Menus API
+   */
+  async fetchMenus(restaurantId: string): Promise<any[]> {
+    try {
+      const restaurant = await Restaurant.findById(restaurantId);
+      if (!restaurant || !restaurant.posConfig.isConnected) {
+        throw new Error('Restaurant not connected to Toast');
+      }
+
+      const { decryptToastCredentials } = await import('../utils/toastEncryption');
+      const credentials = decryptToastCredentials({
+        clientId: restaurant.posConfig.clientId,
+        encryptedClientSecret: restaurant.posConfig.encryptedClientSecret,
+        locationId: restaurant.posConfig.locationId
+      });
+
+      const authResponse = await this.authenticateRestaurant(credentials);
+      const accessToken = authResponse.token.accessToken;
+
+      const response = await this.client.get(
+        `/menus/v2/menus`,
+        {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Toast-Restaurant-External-ID': restaurant.posConfig.locationId
+          }
+        }
+      );
+
+      return response.data || [];
+    } catch (error: any) {
+      console.error('Failed to fetch menus from Toast:', error.response?.data || error.message);
+      return [];
+    }
+  }
+
+  /**
+   * Fetch menu items from Toast Menus API
+   */
+  async fetchMenuItems(restaurantId: string): Promise<any[]> {
+    try {
+      const restaurant = await Restaurant.findById(restaurantId);
+      if (!restaurant || !restaurant.posConfig.isConnected) {
+        throw new Error('Restaurant not connected to Toast');
+      }
+
+      const { decryptToastCredentials } = await import('../utils/toastEncryption');
+      const credentials = decryptToastCredentials({
+        clientId: restaurant.posConfig.clientId,
+        encryptedClientSecret: restaurant.posConfig.encryptedClientSecret,
+        locationId: restaurant.posConfig.locationId
+      });
+
+      const authResponse = await this.authenticateRestaurant(credentials);
+      const accessToken = authResponse.token.accessToken;
+
+      // Menu items can be paginated, so we need to fetch all pages
+      const allItems: any[] = [];
+      let page = 1;
+      let hasMorePages = true;
+
+      while (hasMorePages) {
+        try {
+          const response = await this.client.get(
+            `/menus/v2/items`,
+            {
+              headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Toast-Restaurant-External-ID': restaurant.posConfig.locationId
+              },
+              params: {
+                page: page,
+                pageSize: 100
+              }
+            }
+          );
+
+          const pageData = response.data || [];
+          allItems.push(...pageData);
+
+          // Check if there are more pages
+          if (pageData.length === 100) {
+            page++;
+            // Small delay between pages
+            await new Promise(resolve => setTimeout(resolve, 200));
+          } else {
+            hasMorePages = false;
+          }
+        } catch (error) {
+          console.error(`Failed to fetch menu items page ${page}:`, error);
+          hasMorePages = false;
+        }
+      }
+
+      return allItems;
+    } catch (error: any) {
+      console.error('Failed to fetch menu items from Toast:', error.response?.data || error.message);
       return [];
     }
   }

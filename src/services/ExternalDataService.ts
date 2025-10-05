@@ -59,7 +59,7 @@ export class WeatherService {
   }
 
   /**
-   * Get historical weather data
+   * Get historical weather data using Open-Meteo (FREE, no API key needed)
    */
   async getHistoricalWeather(
     lat: number,
@@ -67,18 +67,26 @@ export class WeatherService {
     timestamp: number
   ): Promise<WeatherData | null> {
     try {
-      const response = await axios.get(`${this.baseUrl}/onecall/timemachine`, {
+      const date = new Date(timestamp);
+      const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD
+
+      // Open-Meteo Archive API - completely free, no API key
+      const response = await axios.get('https://archive-api.open-meteo.com/v1/archive', {
         params: {
-          lat,
-          lon,
-          dt: Math.floor(timestamp / 1000),
-          appid: this.apiKey,
-          units: 'imperial'
+          latitude: lat,
+          longitude: lon,
+          start_date: dateStr,
+          end_date: dateStr,
+          hourly: 'temperature_2m,relative_humidity_2m,precipitation,rain,snowfall,cloud_cover,wind_speed_10m,weather_code',
+          temperature_unit: 'fahrenheit',
+          wind_speed_unit: 'mph',
+          precipitation_unit: 'inch',
+          timezone: 'America/Los_Angeles'
         }
       });
 
-      if (response.data?.current) {
-        return this.parseWeatherResponse(response.data.current);
+      if (response.data?.hourly) {
+        return this.parseOpenMeteoResponse(response.data.hourly, timestamp);
       }
       return null;
     } catch (error) {
@@ -88,27 +96,204 @@ export class WeatherService {
   }
 
   /**
-   * Get weather forecast
+   * Parse Open-Meteo API response
+   */
+  private parseOpenMeteoResponse(hourlyData: any, targetTimestamp: number): WeatherData {
+    // Find the closest hour to our target timestamp
+    const targetDate = new Date(targetTimestamp);
+    const targetHour = targetDate.getHours();
+
+    const idx = Math.min(targetHour, hourlyData.time.length - 1);
+
+    const temp = hourlyData.temperature_2m[idx];
+    const humidity = hourlyData.relative_humidity_2m[idx];
+    const precipitation = hourlyData.precipitation[idx] || 0;
+    const rain = hourlyData.rain[idx] || 0;
+    const snowfall = hourlyData.snowfall[idx] || 0;
+    const cloudCover = hourlyData.cloud_cover[idx];
+    const windSpeed = hourlyData.wind_speed_10m[idx];
+    const weatherCode = hourlyData.weather_code[idx];
+
+    // WMO Weather codes to conditions
+    // 0 = Clear, 1-3 = Partly cloudy, 45-48 = Fog, 51-67 = Rain, 71-77 = Snow, 80-99 = Thunderstorm
+    let condition = 'clear';
+    let description = 'clear sky';
+
+    if (weatherCode === 0) {
+      condition = 'clear';
+      description = 'clear sky';
+    } else if (weatherCode >= 1 && weatherCode <= 3) {
+      condition = 'clouds';
+      description = 'partly cloudy';
+    } else if (weatherCode >= 45 && weatherCode <= 48) {
+      condition = 'mist';
+      description = 'foggy';
+    } else if (weatherCode >= 51 && weatherCode <= 67) {
+      condition = 'rain';
+      description = 'rainy';
+    } else if (weatherCode >= 71 && weatherCode <= 77) {
+      condition = 'snow';
+      description = 'snowy';
+    } else if (weatherCode >= 80 && weatherCode <= 99) {
+      condition = 'thunderstorm';
+      description = 'thunderstorm';
+    }
+
+    const isRaining = rain > 0 || (weatherCode >= 51 && weatherCode <= 67);
+    const isSnowing = snowfall > 0 || (weatherCode >= 71 && weatherCode <= 77);
+    const isClear = weatherCode === 0;
+    const isExtreme = temp < 32 || temp > 95 || (weatherCode >= 80 && weatherCode <= 99);
+
+    let weatherCategory: 'excellent' | 'good' | 'fair' | 'poor' | 'severe';
+    if (isExtreme) {
+      weatherCategory = 'severe';
+    } else if (isRaining || isSnowing) {
+      weatherCategory = 'poor';
+    } else if (cloudCover > 50) {
+      weatherCategory = 'fair';
+    } else if (isClear && temp >= 65 && temp <= 85) {
+      weatherCategory = 'excellent';
+    } else {
+      weatherCategory = 'good';
+    }
+
+    return {
+      timestamp: new Date(hourlyData.time[idx]),
+      temperature: temp,
+      feelsLike: temp - (windSpeed / 4), // Simple wind chill approximation
+      condition,
+      description,
+      humidity,
+      precipitation,
+      windSpeed,
+      visibility: 10000, // Default 10km visibility
+      uvIndex: 0, // Not available in historical data
+      isRaining,
+      isSnowing,
+      isClear,
+      isExtreme,
+      weatherCategory
+    };
+  }
+
+  /**
+   * Get weather forecast using Open-Meteo (FREE, no API key needed)
    */
   async getWeatherForecast(lat: number, lon: number, days: number = 7): Promise<WeatherData[]> {
     try {
-      const response = await axios.get(`${this.baseUrl}/forecast`, {
+      console.log(`🌤️  Fetching ${days}-day forecast for ${lat}, ${lon}...`);
+
+      const today = new Date();
+      const endDate = new Date(today);
+      endDate.setDate(endDate.getDate() + days);
+
+      const startStr = today.toISOString().split('T')[0];
+      const endStr = endDate.toISOString().split('T')[0];
+
+      // Open-Meteo Forecast API - completely free, no API key
+      const response = await axios.get('https://api.open-meteo.com/v1/forecast', {
         params: {
-          lat,
-          lon,
-          appid: this.apiKey,
-          units: 'imperial',
-          cnt: days * 8 // 3-hour intervals
-        }
+          latitude: lat,
+          longitude: lon,
+          start_date: startStr,
+          end_date: endStr,
+          daily: 'temperature_2m_max,temperature_2m_min,precipitation_sum,rain_sum,snowfall_sum,weather_code',
+          temperature_unit: 'fahrenheit',
+          precipitation_unit: 'inch',
+          timezone: 'America/Los_Angeles'
+        },
+        timeout: 10000 // 10 second timeout
       });
 
-      return response.data.list.map((item: any) =>
-        this.parseWeatherResponse(item)
-      );
-    } catch (error) {
-      console.error('Weather forecast error:', error);
+      console.log(`✅ Got forecast data for ${days} days`);
+
+      if (response.data?.daily) {
+        return this.parseOpenMeteoForecastResponse(response.data.daily);
+      }
+      return [];
+    } catch (error: any) {
+      console.error('Weather forecast error:', error.message);
       return [];
     }
+  }
+
+  /**
+   * Parse Open-Meteo forecast response (daily aggregates)
+   */
+  private parseOpenMeteoForecastResponse(dailyData: any): WeatherData[] {
+    const forecasts: WeatherData[] = [];
+
+    for (let i = 0; i < dailyData.time.length; i++) {
+      const tempMax = dailyData.temperature_2m_max[i];
+      const tempMin = dailyData.temperature_2m_min[i];
+      const temp = (tempMax + tempMin) / 2; // Average temp
+      const precipitation = dailyData.precipitation_sum[i] || 0;
+      const rain = dailyData.rain_sum[i] || 0;
+      const snowfall = dailyData.snowfall_sum[i] || 0;
+      const weatherCode = dailyData.weather_code[i];
+
+      // WMO Weather codes to conditions
+      let condition = 'clear';
+      let description = 'clear sky';
+
+      if (weatherCode === 0) {
+        condition = 'clear';
+        description = 'clear sky';
+      } else if (weatherCode >= 1 && weatherCode <= 3) {
+        condition = 'clouds';
+        description = 'partly cloudy';
+      } else if (weatherCode >= 45 && weatherCode <= 48) {
+        condition = 'mist';
+        description = 'foggy';
+      } else if (weatherCode >= 51 && weatherCode <= 67) {
+        condition = 'rain';
+        description = 'rainy';
+      } else if (weatherCode >= 71 && weatherCode <= 77) {
+        condition = 'snow';
+        description = 'snowy';
+      } else if (weatherCode >= 80 && weatherCode <= 99) {
+        condition = 'thunderstorm';
+        description = 'thunderstorm';
+      }
+
+      const isRaining = rain > 0 || (weatherCode >= 51 && weatherCode <= 67);
+      const isSnowing = snowfall > 0 || (weatherCode >= 71 && weatherCode <= 77);
+      const isClear = weatherCode === 0;
+      const isExtreme = temp < 32 || temp > 95 || (weatherCode >= 80 && weatherCode <= 99);
+
+      let weatherCategory: 'excellent' | 'good' | 'fair' | 'poor' | 'severe';
+      if (isExtreme) {
+        weatherCategory = 'severe';
+      } else if (isRaining || isSnowing) {
+        weatherCategory = 'poor';
+      } else if (weatherCode > 0 && weatherCode <= 3) {
+        weatherCategory = 'fair';
+      } else if (isClear && temp >= 65 && temp <= 85) {
+        weatherCategory = 'excellent';
+      } else {
+        weatherCategory = 'good';
+      }
+
+      forecasts.push({
+        timestamp: new Date(dailyData.time[i]),
+        temperature: temp,
+        feelsLike: temp,
+        condition,
+        description,
+        humidity: 0, // Not in daily forecast
+        precipitation,
+        windSpeed: 0, // Not in daily forecast
+        visibility: 10000,
+        uvIndex: 0,
+        isRaining,
+        isSnowing,
+        isClear,
+        isExtreme,
+        weatherCategory
+      });
+    }
+
+    return forecasts;
   }
 
   private parseWeatherResponse(data: any): WeatherData {
