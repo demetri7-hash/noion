@@ -17,6 +17,7 @@ import {
   Sun,
   Zap
 } from 'lucide-react';
+import UpsellOpportunities from '../analytics/UpsellOpportunities';
 
 // Types for dashboard data
 interface IDashboardMetrics {
@@ -103,6 +104,15 @@ export default function AnalyticsDashboard() {
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d'>('30d');
   const [selectedInsight, setSelectedInsight] = useState<IRevenueInsight | null>(null);
+  const [token, setToken] = useState<string>('');
+
+  // Load token on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const authToken = localStorage.getItem('authToken') || '';
+      setToken(authToken);
+    }
+  }, []);
 
   // Load dashboard data
   useEffect(() => {
@@ -361,6 +371,13 @@ export default function AnalyticsDashboard() {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Upsell Opportunities - Show for all users with data */}
+        {token && metrics && (
+          <div className="mb-8">
+            <UpsellOpportunities token={token} />
           </div>
         )}
 
