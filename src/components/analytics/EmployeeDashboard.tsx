@@ -168,7 +168,7 @@ export default function EmployeeDashboard({ token, dateRange }: EmployeeDashboar
         {analytics.gamification.rank > 0 && (
           <div className="mt-4 text-center">
             <p className="text-sm text-yellow-100">
-              You're ranked #{analytics.gamification.rank} on the leaderboard!
+              You&apos;re ranked #{analytics.gamification.rank} on the leaderboard!
             </p>
           </div>
         )}
