@@ -205,6 +205,12 @@ export interface IInsight extends Document {
   // Timestamps
   createdAt: Date;
   updatedAt: Date;
+
+  // Instance methods
+  markAsViewed(viewingTime?: number): Promise<this>;
+  markRecommendationImplemented(recommendationId: string): Promise<this>;
+  sendToRestaurant(): Promise<this>;
+  createNewVersion(updates: Partial<IInsight>): Promise<IInsight>;
 }
 
 // Mongoose schema definition
