@@ -90,26 +90,63 @@ export async function calculateManagerAnalytics(
   endDate: Date
 ): Promise<IManagerAnalytics> {
 
-  // TODO: Fetch team members when Employee collection exists
-  const teamMembers: ITeamMemberStats[] = [];
+  // Fetch restaurant to get team members
+  const Restaurant = require('@/models/Restaurant').default;
+  const restaurant = await Restaurant.findById(restaurantId);
+  const employees = restaurant?.team?.employees || [];
+
+  // Fetch all transactions for the period
+  const allTransactions = await Transaction.find({
+    restaurantId: new Types.ObjectId(restaurantId),
+    transactionDate: { $gte: startDate, $lte: endDate }
+  }).lean();
+
+  // Build team member stats
+  const teamMembers: ITeamMemberStats[] = employees.map((emp: any) => {
+    const toastEmployeeId = emp.toastEmployeeId;
+
+    // Get transactions for this employee
+    const empTransactions = allTransactions.filter(
+      t => t.employee?.id === toastEmployeeId
+    );
+
+    const totalSales = empTransactions.reduce((sum, t) => sum + (t.totalAmount || 0), 0);
+    const transactionCount = empTransactions.length;
+
+    return {
+      userId: emp._id?.toString() || emp.id?.toString(),
+      name: `${emp.firstName} ${emp.lastName}`,
+      email: emp.email || '',
+      role: emp.role || 'employee',
+      performance: {
+        tasksCompleted: 0, // TODO: Implement when Task model is integrated
+        completionRate: 0,
+        onTimeRate: 0
+      },
+      revenue: {
+        totalSales,
+        transactionCount,
+        averageTicket: transactionCount > 0 ? totalSales / transactionCount : 0
+      },
+      gamification: {
+        points: emp.points || 0,
+        level: emp.level || 1,
+        rank: 0 // TODO: Calculate rank based on points
+      }
+    };
+  });
+
   const totalMembers = teamMembers.length;
-  const activeMembers = teamMembers.filter(m => m.performance.tasksCompleted > 0).length;
+  const activeMembers = teamMembers.filter(m => m.revenue.transactionCount > 0).length;
 
   // TODO: Calculate task stats when Task model exists
   const totalTasksAssigned = 0;
   const totalTasksCompleted = 0;
   const overdueCount = 0;
 
-  // Fetch team revenue data
-  // For now, get all transactions for the restaurant
-  // TODO: Filter by team members when Employee collection exists
-  const transactions = await Transaction.find({
-    restaurantId: new Types.ObjectId(restaurantId),
-    transactionDate: { $gte: startDate, $lte: endDate }
-  }).lean();
-
-  const totalSales = transactions.reduce((sum, t) => sum + (t.totalAmount || 0), 0);
-  const transactionCount = transactions.length;
+  // Calculate team revenue from all transactions
+  const totalSales = allTransactions.reduce((sum, t) => sum + (t.totalAmount || 0), 0);
+  const transactionCount = allTransactions.length;
   const averageTicket = transactionCount > 0 ? totalSales / transactionCount : 0;
 
   // Calculate team averages

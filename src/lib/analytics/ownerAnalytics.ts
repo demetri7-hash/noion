@@ -210,7 +210,9 @@ export async function calculateOwnerAnalytics(
     revenue: {
       daily: Object.values(dailyRevenue),
       byChannel: Object.values(byChannel),
-      byEmployee: Object.values(byEmployee).sort((a, b) => b.amount - a.amount),
+      byEmployee: Object.values(byEmployee)
+        .filter(emp => emp.employeeId !== 'unknown' && emp.employeeId !== 'unassigned')
+        .sort((a, b) => b.amount - a.amount),
       topItems: [] // TODO: Implement when menu items are tracked
     },
     employees: {
