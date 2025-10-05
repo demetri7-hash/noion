@@ -125,6 +125,9 @@ export async function POST(request: NextRequest) {
         }
 
         // Create employee record
+        // Active = NOT deleted AND NOT disabled (per Toast API docs)
+        const isActive = !toastEmployee.deleted && !toastEmployee.disabled;
+
         const employeeData = {
           userId: toastEmployee.email || `${toastEmployee.guid}@toast.imported`,
           toastEmployeeId: toastEmployee.guid,
@@ -133,7 +136,7 @@ export async function POST(request: NextRequest) {
           lastName: toastEmployee.lastName,
           role: role,
           phone: toastEmployee.phoneNumber || null,
-          isActive: toastEmployee.deletedDate ? false : true,
+          isActive: isActive,
 
           // Gamification fields (initialize)
           points: 0,
