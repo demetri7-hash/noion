@@ -91,10 +91,10 @@ export default function InsightDetailPage() {
   const [implementingRec, setImplementingRec] = useState<string | null>(null);
 
   useEffect(() => {
-    if (params.id) {
-      fetchInsight(params.id as string);
+    if (params.insightId) {
+      fetchInsight(params.insightId as string);
     }
-  }, [params.id]);
+  }, [params.insightId]);
 
   const fetchInsight = async (id: string) => {
     try {
@@ -130,7 +130,7 @@ export default function InsightDetailPage() {
       setImplementingRec(recommendationId);
 
       const token = localStorage.getItem('authToken') || localStorage.getItem('token');
-      const response = await fetch(`/api/insights/${params.id}`, {
+      const response = await fetch(`/api/insights/${params.insightId}`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,

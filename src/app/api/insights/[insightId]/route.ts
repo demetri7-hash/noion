@@ -17,7 +17,7 @@ export const runtime = 'nodejs';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: { insightId: string } }
 ) {
   // Authorize
   const authResult = await authorize('insights', 'read')(request);
@@ -29,7 +29,7 @@ export async function GET(
   try {
     await connectDB();
 
-    const insightId = params.id;
+    const insightId = params.insightId;
 
     // Validate ObjectId
     if (!Types.ObjectId.isValid(insightId)) {
@@ -85,7 +85,7 @@ export async function GET(
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: { insightId: string } }
 ) {
   const authResult = await authorize('insights', 'update')(request);
   if (authResult instanceof NextResponse) {
@@ -96,7 +96,7 @@ export async function PATCH(
   try {
     await connectDB();
 
-    const insightId = params.id;
+    const insightId = params.insightId;
     const body = await request.json();
 
     if (!Types.ObjectId.isValid(insightId)) {
