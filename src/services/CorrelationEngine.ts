@@ -934,12 +934,13 @@ export class CorrelationEngine {
       // Analyze each item category for weather patterns
       for (const [itemCategory, weatherData] of Object.entries(itemsByWeather)) {
         // Find items that sell significantly better in specific weather
-        const allItems = new Set([
+        const allItemsSet = new Set([
           ...Array.from(weatherData.hot.keys()),
           ...Array.from(weatherData.cold.keys()),
           ...Array.from(weatherData.rainy.keys()),
           ...Array.from(weatherData.normal.keys())
         ]);
+        const allItems = Array.from(allItemsSet);
 
         for (const itemName of allItems) {
           const hotSales = weatherData.hot.get(itemName) || 0;
