@@ -120,6 +120,17 @@ export async function GET(
 
     if (restaurant?.posConfig?.isConnected && restaurant.posConfig.type === 'toast') {
       try {
+        // Log what we have in posConfig for debugging
+        console.log('Toast credentials check:', {
+          hasClientId: !!restaurant.posConfig.clientId,
+          hasEncryptedClientSecret: !!restaurant.posConfig.encryptedClientSecret,
+          hasLocationId: !!restaurant.posConfig.locationId,
+          posConfigKeys: Object.keys(restaurant.posConfig),
+          clientIdLength: restaurant.posConfig.clientId?.length,
+          encryptedSecretLength: restaurant.posConfig.encryptedClientSecret?.length,
+          locationId: restaurant.posConfig.locationId
+        });
+
         const credentials = decryptToastCredentials({
           clientId: restaurant.posConfig.clientId!,
           encryptedClientSecret: restaurant.posConfig.encryptedClientSecret!,

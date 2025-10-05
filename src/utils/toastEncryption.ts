@@ -83,13 +83,19 @@ export function decryptToastCredentials(encryptedData: {
   clientSecret: string;
   locationGuid: string;
 } {
-  if (!encryptedData.clientId || !encryptedData.encryptedClientSecret || !encryptedData.locationId) {
-    throw new Error('Missing required encrypted credentials');
+  // Detailed error checking
+  const missing: string[] = [];
+  if (!encryptedData.clientId) missing.push('clientId');
+  if (!encryptedData.encryptedClientSecret) missing.push('encryptedClientSecret');
+  if (!encryptedData.locationId) missing.push('locationId');
+
+  if (missing.length > 0) {
+    throw new Error(`Missing required encrypted credentials: ${missing.join(', ')}. Available fields: ${Object.keys(encryptedData).join(', ')}`);
   }
 
   return {
-    clientId: decryptField(encryptedData.clientId),
-    clientSecret: decryptField(encryptedData.encryptedClientSecret),
-    locationGuid: encryptedData.locationId
+    clientId: decryptField(encryptedData.clientId!),
+    clientSecret: decryptField(encryptedData.encryptedClientSecret!),
+    locationGuid: encryptedData.locationId!
   };
 }

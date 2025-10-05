@@ -100,7 +100,13 @@ async function handleAutoSync(user: any): Promise<void> {
     return; // Auto-sync not enabled
   }
 
-  if (!posConfig.isActive || !posConfig.clientId || !posConfig.encryptedClientSecret) {
+  if (!posConfig.isActive || !posConfig.clientId || !posConfig.encryptedClientSecret || !posConfig.locationId) {
+    console.log('⚠️ Auto-sync skipped: Missing credentials', {
+      hasClientId: !!posConfig.clientId,
+      hasEncryptedClientSecret: !!posConfig.encryptedClientSecret,
+      hasLocationId: !!posConfig.locationId,
+      isActive: posConfig.isActive
+    });
     return; // Missing credentials
   }
 
