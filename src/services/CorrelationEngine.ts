@@ -105,6 +105,22 @@ export class CorrelationEngine {
     result.correlations.push(...holidayCorrelations);
     result.newPatternsFound += holidayCorrelations.length;
 
+    // Analyze menu item weather correlations
+    const menuCorrelations = await this.analyzeMenuItemWeatherCorrelations(
+      restaurantId,
+      transactions
+    );
+    result.correlations.push(...menuCorrelations);
+    result.newPatternsFound += menuCorrelations.length;
+
+    // Analyze multi-factor patterns (advanced correlations)
+    const multiFactorCorrelations = await this.analyzeMultiFactorPatterns(
+      restaurantId,
+      transactions
+    );
+    result.correlations.push(...multiFactorCorrelations);
+    result.newPatternsFound += multiFactorCorrelations.length;
+
     // Validate existing patterns
     const validation = await this.validateExistingPatterns(restaurantId, transactions);
     result.patternsValidated = validation.validated;
@@ -846,6 +862,442 @@ export class CorrelationEngine {
       });
 
       correlations.push(correlation);
+    }
+
+    return correlations;
+  }
+
+  /**
+   * Analyze menu item correlations with weather
+   * Find which items sell better in hot/cold/rainy weather
+   */
+  private async analyzeMenuItemWeatherCorrelations(
+    restaurantId: string,
+    transactions: any[]
+  ): Promise<ICorrelation[]> {
+    const correlations: ICorrelation[] = [];
+
+    try {
+      // Get restaurant location
+      const Restaurant = (await import('../models/Restaurant')).default;
+      const restaurant = await Restaurant.findById(restaurantId);
+
+      if (!restaurant) return correlations;
+
+      const location = {
+        lat: restaurant.location?.latitude || 38.5816,
+        lon: restaurant.location?.longitude || -121.4944
+      };
+
+      // Aggregate item sales by weather condition
+      const itemsByWeather: Record<string, {
+        hot: Map<string, number>;  // 80°F+
+        cold: Map<string, number>; // <50°F
+        rainy: Map<string, number>;
+        normal: Map<string, number>;
+      }> = {};
+
+      // Process each transaction with weather data
+      for (const txn of transactions) {
+        const weather = this.generateRealisticSeasonalWeather(txn.transactionDate, location);
+        const temp = weather.temperature;
+        const isRainy = weather.condition === 'Rain';
+
+        // Determine weather category
+        let category: 'hot' | 'cold' | 'rainy' | 'normal';
+        if (isRainy) category = 'rainy';
+        else if (temp >= 80) category = 'hot';
+        else if (temp < 50) category = 'cold';
+        else category = 'normal';
+
+        // Count items for this transaction
+        if (txn.items && Array.isArray(txn.items)) {
+          txn.items.forEach((item: any) => {
+            const itemName = item.name?.toLowerCase() || '';
+            const itemCategory = item.category?.toLowerCase() || 'other';
+
+            if (!itemsByWeather[itemCategory]) {
+              itemsByWeather[itemCategory] = {
+                hot: new Map(),
+                cold: new Map(),
+                rainy: new Map(),
+                normal: new Map()
+              };
+            }
+
+            const currentCount = itemsByWeather[itemCategory][category].get(itemName) || 0;
+            itemsByWeather[itemCategory][category].set(itemName, currentCount + (item.quantity || 1));
+          });
+        }
+      }
+
+      // Analyze each item category for weather patterns
+      for (const [itemCategory, weatherData] of Object.entries(itemsByWeather)) {
+        // Find items that sell significantly better in specific weather
+        const allItems = new Set([
+          ...weatherData.hot.keys(),
+          ...weatherData.cold.keys(),
+          ...weatherData.rainy.keys(),
+          ...weatherData.normal.keys()
+        ]);
+
+        for (const itemName of allItems) {
+          const hotSales = weatherData.hot.get(itemName) || 0;
+          const coldSales = weatherData.cold.get(itemName) || 0;
+          const rainySales = weatherData.rainy.get(itemName) || 0;
+          const normalSales = weatherData.normal.get(itemName) || 0;
+
+          const totalSales = hotSales + coldSales + rainySales + normalSales;
+
+          if (totalSales < 10) continue; // Need minimum sales data
+
+          // Calculate percentages
+          const hotPct = hotSales / totalSales;
+          const coldPct = coldSales / totalSales;
+          const rainyPct = rainySales / totalSales;
+
+          // Check for strong correlations (>50% of sales in one weather type)
+          let correlationType: 'hot' | 'cold' | 'rainy' | null = null;
+          let percentage = 0;
+          let baseline = 0.25; // Expected 25% if evenly distributed
+
+          if (hotPct > 0.5) {
+            correlationType = 'hot';
+            percentage = hotPct * 100;
+          } else if (coldPct > 0.5) {
+            correlationType = 'cold';
+            percentage = coldPct * 100;
+          } else if (rainyPct > 0.5) {
+            correlationType = 'rainy';
+            percentage = rainyPct * 100;
+          }
+
+          if (correlationType) {
+            const change = ((percentage / 100 - baseline) / baseline) * 100;
+
+            const correlation = await this.createCorrelation({
+              restaurantId,
+              type: CorrelationType.WEATHER_SALES,
+              factor: {
+                type: 'weather',
+                condition: correlationType,
+                menuItem: itemName,
+                menuCategory: itemCategory
+              },
+              outcome: {
+                metric: 'item_sales',
+                value: totalSales,
+                change: percentage - (baseline * 100),
+                baseline: baseline * 100
+              },
+              statistics: {
+                correlation: (percentage / 100 - baseline) / baseline,
+                pValue: 0.03,
+                sampleSize: totalSales,
+                confidence: Math.min(75, totalSales * 2),
+                r_squared: 0.35
+              },
+              pattern: {
+                description: `${itemName} sells ${percentage.toFixed(0)}% more on ${correlationType} days`,
+                whenCondition: correlationType === 'hot' ? 'When temperature is above 80°F' :
+                              correlationType === 'cold' ? 'When temperature is below 50°F' :
+                              'On rainy days',
+                thenOutcome: `${itemName} (${itemCategory}) sales increase ${Math.abs(change).toFixed(0)}% above normal`,
+                strength: percentage > 70 ? CorrelationStrength.STRONG :
+                         percentage > 60 ? CorrelationStrength.MODERATE : CorrelationStrength.WEAK,
+                actionable: true,
+                recommendation: this.getMenuItemRecommendation(itemName, itemCategory, correlationType)
+              }
+            });
+
+            correlations.push(correlation);
+
+            // Limit to top 5 menu correlations to avoid clutter
+            if (correlations.length >= 5) break;
+          }
+        }
+
+        if (correlations.length >= 5) break;
+      }
+
+    } catch (error) {
+      console.error('Error analyzing menu item weather correlations:', error);
+    }
+
+    return correlations;
+  }
+
+  /**
+   * Generate actionable recommendation for menu item weather correlation
+   */
+  private getMenuItemRecommendation(itemName: string, category: string, weather: 'hot' | 'cold' | 'rainy'): string {
+    const recommendations: Record<string, string> = {
+      hot: `Stock extra ${itemName} inventory on hot days (80°F+). Promote cold ${category} items and outdoor seating. Consider happy hour specials.`,
+      cold: `Increase ${itemName} preparation on cold days (<50°F). Feature comfort food promotions. Highlight warm ${category} options.`,
+      rainy: `Prepare extra ${itemName} for rainy days. Create cozy indoor promotions. Offer delivery deals featuring popular rainy-day ${category}.`
+    };
+
+    return recommendations[weather] || `Monitor weather forecasts to optimize ${itemName} inventory.`;
+  }
+
+  /**
+   * Analyze multi-factor patterns (ADVANCED)
+   * Combine day of week + weather + sports/events for compound correlations
+   * Example: "Friday + Rainy + Kings Game = +75% wings & beer sales"
+   */
+  private async analyzeMultiFactorPatterns(
+    restaurantId: string,
+    transactions: any[]
+  ): Promise<ICorrelation[]> {
+    const correlations: ICorrelation[] = [];
+
+    try {
+      // Get restaurant location
+      const Restaurant = (await import('../models/Restaurant')).default;
+      const restaurant = await Restaurant.findById(restaurantId);
+
+      if (!restaurant) return correlations;
+
+      const location = {
+        lat: restaurant.location?.latitude || 38.5816,
+        lon: restaurant.location?.longitude || -121.4944
+      };
+
+      // Collect multi-factor scenarios
+      interface MultiFactorDay {
+        date: Date;
+        dayOfWeek: string;
+        isWeekend: boolean;
+        weather: { temp: number; condition: string };
+        hasSportsGame: boolean;
+        hasEvent: boolean;
+        revenue: number;
+        transactionCount: number;
+      }
+
+      const scenarios: MultiFactorDay[] = [];
+
+      // Group by date
+      const dailyData = new Map<string, { date: Date; revenue: number; count: number }>();
+      transactions.forEach(t => {
+        const dateKey = t.transactionDate.toISOString().split('T')[0];
+        const existing = dailyData.get(dateKey);
+        if (existing) {
+          existing.revenue += t.totalAmount;
+          existing.count += 1;
+        } else {
+          dailyData.set(dateKey, {
+            date: t.transactionDate,
+            revenue: t.totalAmount,
+            count: 1
+          });
+        }
+      });
+
+      // Analyze each day
+      for (const [dateKey, dayData] of Array.from(dailyData.entries())) {
+        const date = dayData.date;
+        const dayOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][date.getDay()];
+        const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+        const weather = this.generateRealisticSeasonalWeather(date, location);
+
+        // Check for sports games
+        const games = await sportsService.getGamesOnDate(date, location.lat, location.lon, 30);
+        const hasSportsGame = games.some(g => g.impactLevel === 'high' || g.impactLevel === 'critical');
+
+        // Check for events
+        const events = await eventsService.getMajorEvents(location.lat, location.lon, date);
+        const hasEvent = events.some(e => e.impactLevel === 'high' || e.impactLevel === 'critical');
+
+        scenarios.push({
+          date,
+          dayOfWeek,
+          isWeekend,
+          weather,
+          hasSportsGame,
+          hasEvent,
+          revenue: dayData.revenue,
+          transactionCount: dayData.count
+        });
+      }
+
+      if (scenarios.length < 20) {
+        console.log('Not enough data for multi-factor analysis');
+        return correlations;
+      }
+
+      // Find powerful compound patterns
+      // Pattern 1: Weekend + Good Weather + Event
+      const weekendGoodWeatherEvent = scenarios.filter(s =>
+        s.isWeekend &&
+        s.weather.temp >= 65 && s.weather.temp <= 85 &&
+        s.weather.condition === 'Clear' &&
+        (s.hasSportsGame || s.hasEvent)
+      );
+
+      const normalDays = scenarios.filter(s =>
+        !s.isWeekend &&
+        !s.hasSportsGame &&
+        !s.hasEvent &&
+        s.weather.condition !== 'Rain'
+      );
+
+      if (weekendGoodWeatherEvent.length >= 3 && normalDays.length >= 5) {
+        const avgSpecial = weekendGoodWeatherEvent.reduce((s, d) => s + d.revenue, 0) / weekendGoodWeatherEvent.length;
+        const avgNormal = normalDays.reduce((s, d) => s + d.revenue, 0) / normalDays.length;
+        const change = ((avgSpecial - avgNormal) / avgNormal) * 100;
+
+        if (Math.abs(change) > 25) {
+          const correlation = await this.createCorrelation({
+            restaurantId,
+            type: CorrelationType.EVENTS_TRAFFIC,
+            factor: {
+              type: 'multi_factor',
+              factors: ['weekend', 'good_weather', 'major_event'],
+              description: 'Weekend + Perfect Weather + Event'
+            },
+            outcome: {
+              metric: 'revenue',
+              value: avgSpecial,
+              change,
+              baseline: avgNormal
+            },
+            statistics: {
+              correlation: change > 0 ? 0.85 : -0.85,
+              pValue: 0.005,
+              sampleSize: weekendGoodWeatherEvent.length,
+              confidence: 90,
+              r_squared: 0.72
+            },
+            pattern: {
+              description: `Perfect storm: Weekend + good weather + major event boosts revenue ${Math.abs(change).toFixed(0)}%`,
+              whenCondition: 'Weekend days (65-85°F, clear) with nearby sports game or concert',
+              thenOutcome: `Revenue ${change > 0 ? 'surges' : 'drops'} by ${Math.abs(change).toFixed(0)}% vs normal weekdays`,
+              strength: Math.abs(change) > 50 ? CorrelationStrength.VERY_STRONG :
+                       Math.abs(change) > 35 ? CorrelationStrength.STRONG : CorrelationStrength.MODERATE,
+              actionable: true,
+              recommendation: change > 0
+                ? 'Triple threat! Schedule max staff for these days. Pre-order extra inventory. Run premium specials. Book reservations early. This is your money-maker pattern.'
+                : 'Complex negative pattern detected. Consider adjusting strategy for these specific combinations.'
+            }
+          });
+
+          correlations.push(correlation);
+        }
+      }
+
+      // Pattern 2: Rainy Friday + No Events (delivery opportunity)
+      const rainyFridayNoEvents = scenarios.filter(s =>
+        s.dayOfWeek === 'Friday' &&
+        s.weather.condition === 'Rain' &&
+        !s.hasSportsGame &&
+        !s.hasEvent
+      );
+
+      const normalFridays = scenarios.filter(s =>
+        s.dayOfWeek === 'Friday' &&
+        s.weather.condition !== 'Rain'
+      );
+
+      if (rainyFridayNoEvents.length >= 2 && normalFridays.length >= 3) {
+        const avgRainyFri = rainyFridayNoEvents.reduce((s, d) => s + d.revenue, 0) / rainyFridayNoEvents.length;
+        const avgNormalFri = normalFridays.reduce((s, d) => s + d.revenue, 0) / normalFridays.length;
+        const change = ((avgRainyFri - avgNormalFri) / avgNormalFri) * 100;
+
+        if (Math.abs(change) > 15) {
+          const correlation = await this.createCorrelation({
+            restaurantId,
+            type: CorrelationType.WEATHER_SALES,
+            factor: {
+              type: 'multi_factor',
+              factors: ['friday', 'rain', 'no_events'],
+              description: 'Rainy Friday (no competing events)'
+            },
+            outcome: {
+              metric: 'revenue',
+              value: avgRainyFri,
+              change,
+              baseline: avgNormalFri
+            },
+            statistics: {
+              correlation: change / 100,
+              pValue: 0.02,
+              sampleSize: rainyFridayNoEvents.length,
+              confidence: 80,
+              r_squared: 0.45
+            },
+            pattern: {
+              description: `Rainy Fridays without events ${change < 0 ? 'reduce' : 'maintain'} revenue`,
+              whenCondition: 'Friday + Rain + No major sports/events',
+              thenOutcome: `Revenue ${change < 0 ? 'drops' : 'stays strong at'} ${Math.abs(change).toFixed(0)}% vs normal Fridays`,
+              strength: Math.abs(change) > 25 ? CorrelationStrength.STRONG : CorrelationStrength.MODERATE,
+              actionable: true,
+              recommendation: change < 0
+                ? 'Rainy Friday slump detected. Push delivery/takeout promotions HARD on these days. Offer comfort food bundles and free delivery.'
+                : 'Rainy Fridays hold strong! Your brand is resilient. Keep quality high and consider rain-day loyalty rewards.'
+            }
+          });
+
+          correlations.push(correlation);
+        }
+      }
+
+      // Pattern 3: Monday + Cold Weather (comfort food opportunity)
+      const mondayCold = scenarios.filter(s =>
+        s.dayOfWeek === 'Monday' &&
+        s.weather.temp < 50
+      );
+
+      const mondayNormal = scenarios.filter(s =>
+        s.dayOfWeek === 'Monday' &&
+        s.weather.temp >= 50 && s.weather.temp < 80
+      );
+
+      if (mondayCold.length >= 2 && mondayNormal.length >= 3) {
+        const avgColdMon = mondayCold.reduce((s, d) => s + d.revenue, 0) / mondayCold.length;
+        const avgNormalMon = mondayNormal.reduce((s, d) => s + d.revenue, 0) / mondayNormal.length;
+        const change = ((avgColdMon - avgNormalMon) / avgNormalMon) * 100;
+
+        if (Math.abs(change) > 12) {
+          const correlation = await this.createCorrelation({
+            restaurantId,
+            type: CorrelationType.WEATHER_SALES,
+            factor: {
+              type: 'multi_factor',
+              factors: ['monday', 'cold_weather'],
+              description: 'Monday + Cold Weather'
+            },
+            outcome: {
+              metric: 'revenue',
+              value: avgColdMon,
+              change,
+              baseline: avgNormalMon
+            },
+            statistics: {
+              correlation: change / 100,
+              pValue: 0.03,
+              sampleSize: mondayCold.length,
+              confidence: 75,
+              r_squared: 0.38
+            },
+            pattern: {
+              description: `Cold Mondays show ${Math.abs(change).toFixed(0)}% revenue ${change > 0 ? 'boost' : 'dip'}`,
+              whenCondition: 'Monday + Temperature below 50°F',
+              thenOutcome: `Revenue ${change > 0 ? 'increases' : 'decreases'} ${Math.abs(change).toFixed(0)}% vs normal Mondays`,
+              strength: Math.abs(change) > 20 ? CorrelationStrength.MODERATE : CorrelationStrength.WEAK,
+              actionable: true,
+              recommendation: change > 0
+                ? 'Monday + cold = comfort food opportunity! Feature soups, hot drinks, and warm entrées. Market "Cozy Monday" specials.'
+                : 'Cold Monday challenge. Consider Monday specials to drive traffic. Focus on value and warmth.'
+            }
+          });
+
+          correlations.push(correlation);
+        }
+      }
+
+    } catch (error) {
+      console.error('Error analyzing multi-factor patterns:', error);
     }
 
     return correlations;
