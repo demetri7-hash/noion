@@ -25,9 +25,11 @@ import {
   UserCircle,
   Briefcase,
   Link as LinkIcon,
-  RefreshCw
+  RefreshCw,
+  Lightbulb
 } from 'lucide-react';
 import { UserRole } from '@/models/Restaurant';
+import ToastSyncProgress from '@/components/pos/ToastSyncProgress';
 
 interface NavItem {
   name: string;
@@ -194,6 +196,13 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       icon: MessageSquare,
     });
 
+    // AI Insights
+    baseNav.push({
+      name: 'AI Insights',
+      href: '/insights',
+      icon: Lightbulb,
+    });
+
     // Gamification
     baseNav.push({
       name: 'Leaderboard',
@@ -345,20 +354,15 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           ))}
         </nav>
 
-        {/* Help section */}
-        <div className="absolute bottom-0 left-0 right-0 px-4 py-4 border-t border-gray-200 bg-white space-y-1">
-          <button
-            onClick={handleSyncToast}
-            disabled={syncing}
-            className="w-full flex items-center px-3 py-2 text-sm font-medium text-blue-600 rounded-md hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <RefreshCw className={`mr-3 h-5 w-5 ${syncing ? 'animate-spin' : ''}`} />
-            {syncing ? 'Syncing...' : 'Sync Toast Data'}
-          </button>
-          <button className="w-full flex items-center px-3 py-2 text-sm font-medium text-gray-600 rounded-md hover:bg-gray-50 hover:text-gray-900 transition-colors">
-            <HelpCircle className="mr-3 h-5 w-5" />
-            Help & Support
-          </button>
+        {/* Toast Sync Progress & Help section */}
+        <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-200">
+          <ToastSyncProgress restaurantId={user.restaurantId} />
+          <div className="px-4 py-2 border-t border-gray-200">
+            <button className="w-full flex items-center px-3 py-2 text-sm font-medium text-gray-600 rounded-md hover:bg-gray-50 hover:text-gray-900 transition-colors">
+              <HelpCircle className="mr-3 h-5 w-5" />
+              Help & Support
+            </button>
+          </div>
         </div>
       </div>
 
