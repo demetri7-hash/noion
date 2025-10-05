@@ -14,7 +14,8 @@ import {
   ChevronDown,
   Home,
   CreditCard,
-  Zap
+  Zap,
+  Lightbulb
 } from 'lucide-react';
 import ToastSyncProgress from '@/components/pos/ToastSyncProgress';
 
@@ -68,6 +69,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       href: '/analytics',
       icon: BarChart3,
       current: pathname === '/analytics'
+    },
+    {
+      name: 'AI Insights',
+      href: '/insights',
+      icon: Lightbulb,
+      current: pathname?.startsWith('/insights')
     },
     {
       name: 'POS Integration',

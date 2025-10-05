@@ -8,6 +8,7 @@
 import React, { Suspense, useState, useEffect } from 'react';
 import MainLayout from '../../../components/layout/MainLayout';
 import EmployeeDashboard from '../../../components/analytics/EmployeeDashboard';
+import EmployeeInsights from '../../../components/insights/EmployeeInsights';
 
 function EmployeeDashboardContent() {
   const [token, setToken] = useState<string>('');
@@ -81,6 +82,9 @@ function EmployeeDashboardContent() {
 
         {/* Dashboard */}
         <EmployeeDashboard token={token} dateRange={dateRange} />
+
+        {/* AI Insights & Recommendations */}
+        <EmployeeInsights restaurantId="68e0bd8a603ef36c8257e021" />
       </div>
     </MainLayout>
   );
