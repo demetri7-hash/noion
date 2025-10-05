@@ -113,10 +113,9 @@ export async function POST(request: NextRequest) {
     restaurant.posConfig = {
       type: POSSystemType.TOAST,
       isConnected: false, // Will be set to true after first successful sync
-      clientId: encryptedCredentials.clientId, // Store encrypted
-      encryptedAccessToken: encryptedCredentials.clientSecret, // Store encrypted
-      encryptedClientSecret: encryptedCredentials.clientSecret,
-      locationId: locationGuid,
+      clientId: encryptedCredentials.clientId, // Encrypted clientId
+      encryptedClientSecret: encryptedCredentials.clientSecret, // Encrypted clientSecret
+      locationId: encryptedCredentials.locationGuid, // Plain locationGuid
       lastSyncAt: lastSyncDate, // Will be updated by sync job
       syncInterval: 'on_login', // Sync every time user logs in
       isActive: true
@@ -128,6 +127,12 @@ export async function POST(request: NextRequest) {
     console.log(`   Job ID: ${jobId}`);
     console.log(`   Sync type: ${fullSync ? 'full' : 'incremental'}`);
     console.log(`   Date range: ${startDate.toISOString()} to ${now.toISOString()}`);
+    console.log(`   Config saved:`, {
+      hasClientId: !!restaurant.posConfig?.clientId,
+      hasEncryptedSecret: !!restaurant.posConfig?.encryptedClientSecret,
+      hasLocationId: !!restaurant.posConfig?.locationId,
+      locationId: restaurant.posConfig?.locationId
+    });
 
     return NextResponse.json({
       success: true,

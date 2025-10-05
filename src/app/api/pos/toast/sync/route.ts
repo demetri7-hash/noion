@@ -30,11 +30,24 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if Toast is configured
+    console.log('Checking Toast config:', {
+      hasClientId: !!restaurant.posConfig?.clientId,
+      hasEncryptedSecret: !!restaurant.posConfig?.encryptedClientSecret,
+      hasLocationId: !!restaurant.posConfig?.locationId,
+      locationId: restaurant.posConfig?.locationId,
+      posConfigKeys: restaurant.posConfig ? Object.keys(restaurant.posConfig) : []
+    });
+
     if (!restaurant.posConfig?.clientId || !restaurant.posConfig?.encryptedClientSecret || !restaurant.posConfig?.locationId) {
       return NextResponse.json(
         {
           error: 'Toast POS not fully configured',
-          details: 'Missing credentials. Please reconnect to Toast POS.'
+          details: 'Missing credentials. Please reconnect to Toast POS.',
+          debug: {
+            hasClientId: !!restaurant.posConfig?.clientId,
+            hasEncryptedSecret: !!restaurant.posConfig?.encryptedClientSecret,
+            hasLocationId: !!restaurant.posConfig?.locationId
+          }
         },
         { status: 400 }
       );
