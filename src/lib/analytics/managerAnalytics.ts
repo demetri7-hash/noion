@@ -108,7 +108,7 @@ export async function calculateManagerAnalytics(
     transactionDate: { $gte: startDate, $lte: endDate }
   }).lean();
 
-  const totalSales = transactions.reduce((sum, t) => sum + ((t as any).totals?.total || 0), 0);
+  const totalSales = transactions.reduce((sum, t) => sum + (t.totalAmount || 0), 0);
   const transactionCount = transactions.length;
   const averageTicket = transactionCount > 0 ? totalSales / transactionCount : 0;
 
@@ -181,7 +181,7 @@ export async function getTeamMemberStats(
     transactionDate: { $gte: startDate, $lte: endDate }
   }).lean();
 
-  const totalSales = transactions.reduce((sum, t) => sum + ((t as any).totals?.total || 0), 0);
+  const totalSales = transactions.reduce((sum, t) => sum + (t.totalAmount || 0), 0);
   const transactionCount = transactions.length;
   const averageTicket = transactionCount > 0 ? totalSales / transactionCount : 0;
 
