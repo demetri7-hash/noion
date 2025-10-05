@@ -12,11 +12,14 @@ export enum CorrelationType {
   WEATHER_TRAFFIC = 'weather_traffic',
   EVENT_SALES = 'event_sales',
   EVENT_TRAFFIC = 'event_traffic',
+  EVENTS_TRAFFIC = 'events_traffic', // Alias for EVENT_TRAFFIC
   HOLIDAY_SALES = 'holiday_sales',
   HOLIDAY_BEHAVIOR = 'holiday_behavior',
   DAY_TYPE = 'day_type',
   TEMPERATURE_ITEMS = 'temperature_items',
-  WEATHER_MENU = 'weather_menu'
+  WEATHER_MENU = 'weather_menu',
+  SPORTS_SALES = 'sports_sales',
+  MULTI_FACTOR = 'multi_factor'
 }
 
 // Correlation strength
@@ -31,17 +34,20 @@ export enum CorrelationStrength {
 
 // External factor that influences behavior
 export interface IExternalFactor {
-  type: 'weather' | 'event' | 'holiday' | 'day_of_week' | 'time_of_day';
+  type: 'weather' | 'event' | 'holiday' | 'day_of_week' | 'time_of_day' | 'sports' | 'multi_factor';
 
   // Weather factors
   temperature?: number;
   weatherCondition?: string;
   precipitation?: number;
+  weatherCategory?: string;
 
   // Event factors
   eventType?: string;
   eventDistance?: number;
   eventAttendance?: number;
+  venueName?: string;
+  expectedAttendance?: number;
 
   // Holiday factors
   holidayName?: string;
@@ -51,6 +57,19 @@ export interface IExternalFactor {
   dayOfWeek?: string;
   hour?: number;
   isWeekend?: boolean;
+
+  // Sports factors
+  league?: string;
+  teamName?: string;
+  isGameDay?: boolean;
+
+  // Menu item factors
+  menuItem?: string;
+  menuCategory?: string;
+
+  // Multi-factor patterns
+  factors?: string[];
+  description?: string;
 }
 
 // Business outcome affected

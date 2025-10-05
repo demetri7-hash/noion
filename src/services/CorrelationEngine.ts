@@ -186,8 +186,8 @@ export class CorrelationEngine {
             type: CorrelationType.WEATHER_SALES,
             factor: {
               type: 'weather',
-              condition: 'precipitation',
-              isRaining: true
+              weatherCondition: 'precipitation',
+              precipitation: precipCorrelation.avgPrecipitation
             },
             outcome: precipCorrelation.outcome,
             statistics: precipCorrelation.statistics,
@@ -980,7 +980,7 @@ export class CorrelationEngine {
               type: CorrelationType.WEATHER_SALES,
               factor: {
                 type: 'weather',
-                condition: correlationType,
+                weatherCondition: correlationType,
                 menuItem: itemName,
                 menuCategory: itemCategory
               },
