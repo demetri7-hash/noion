@@ -11,6 +11,39 @@
  * This data is fetched once and cached to provide human-readable
  * names for GUIDs and enable timezone-aware displays.
  */
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -18,7 +51,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ToastConfigService = void 0;
 const axios_1 = __importDefault(require("axios"));
 const models_1 = require("../models");
-const encryption_1 = require("../utils/encryption");
 const TOAST_API_BASE_URL = process.env.TOAST_API_BASE_URL || 'https://ws-api.toasttab.com';
 /**
  * Service for fetching Toast POS configuration data
@@ -38,6 +70,29 @@ class ToastConfigService {
         }
     }
     /**
+     * Helper method to get fresh Toast access token
+     * Re-authenticates using stored encrypted credentials
+     */
+    async getAccessToken(restaurantId) {
+        const restaurant = await models_1.Restaurant.findById(restaurantId);
+        if (!restaurant || !restaurant.posConfig.isConnected) {
+            throw new Error('Restaurant not connected to Toast');
+        }
+        // Re-authenticate using encrypted credentials
+        const { decryptToastCredentials } = await Promise.resolve().then(() => __importStar(require('../utils/toastEncryption')));
+        const credentials = decryptToastCredentials({
+            clientId: restaurant.posConfig.clientId,
+            encryptedClientSecret: restaurant.posConfig.encryptedClientSecret,
+            locationId: restaurant.posConfig.locationId
+        });
+        const authResponse = await this.client.post('/authentication/v1/authentication/login', {
+            clientId: credentials.clientId,
+            clientSecret: credentials.clientSecret,
+            userAccessType: 'TOAST_MACHINE_CLIENT'
+        });
+        return authResponse.data.token?.accessToken || authResponse.data.access_token;
+    }
+    /**
      * Fetch and store restaurant configuration including timezone
      */
     async fetchRestaurantConfig(restaurantId) {
@@ -47,8 +102,8 @@ class ToastConfigService {
             if (!restaurant || !restaurant.posConfig.isConnected) {
                 throw new Error('Restaurant not connected to Toast');
             }
-            // Decrypt access token
-            const accessToken = encryption_1.EncryptionUtil.decrypt(restaurant.posConfig.encryptedAccessToken, this.encryptionKey);
+            // Get fresh access token
+            const accessToken = await this.getAccessToken(restaurantId);
             // Fetch restaurant configuration
             const response = await this.client.get(`/config/v2/restaurants/${restaurant.posConfig.locationId || restaurant.posConfig.managementGroupId}`, {
                 headers: {
@@ -107,7 +162,8 @@ class ToastConfigService {
             if (!restaurant || !restaurant.posConfig.isConnected) {
                 throw new Error('Restaurant not connected to Toast');
             }
-            const accessToken = encryption_1.EncryptionUtil.decrypt(restaurant.posConfig.encryptedAccessToken, this.encryptionKey);
+            // Get fresh access token
+            const accessToken = await this.getAccessToken(restaurantId);
             const response = await this.client.get(`/config/v2/serviceAreas`, {
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,
@@ -142,7 +198,8 @@ class ToastConfigService {
             if (!restaurant || !restaurant.posConfig.isConnected) {
                 throw new Error('Restaurant not connected to Toast');
             }
-            const accessToken = encryption_1.EncryptionUtil.decrypt(restaurant.posConfig.encryptedAccessToken, this.encryptionKey);
+            // Get fresh access token
+            const accessToken = await this.getAccessToken(restaurantId);
             const response = await this.client.get(`/config/v2/revenueCenters`, {
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,
@@ -175,7 +232,8 @@ class ToastConfigService {
             if (!restaurant || !restaurant.posConfig.isConnected) {
                 throw new Error('Restaurant not connected to Toast');
             }
-            const accessToken = encryption_1.EncryptionUtil.decrypt(restaurant.posConfig.encryptedAccessToken, this.encryptionKey);
+            // Get fresh access token
+            const accessToken = await this.getAccessToken(restaurantId);
             const response = await this.client.get(`/config/v2/diningOptions`, {
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,

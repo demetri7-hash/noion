@@ -75,6 +75,36 @@ export class ToastConfigService {
   }
 
   /**
+   * Helper method to get fresh Toast access token
+   * Re-authenticates using stored encrypted credentials
+   */
+  private async getAccessToken(restaurantId: string): Promise<string> {
+    const restaurant = await Restaurant.findById(restaurantId);
+    if (!restaurant || !restaurant.posConfig.isConnected) {
+      throw new Error('Restaurant not connected to Toast');
+    }
+
+    // Re-authenticate using encrypted credentials
+    const { decryptToastCredentials } = await import('../utils/toastEncryption');
+    const credentials = decryptToastCredentials({
+      clientId: restaurant.posConfig.clientId,
+      encryptedClientSecret: restaurant.posConfig.encryptedClientSecret,
+      locationId: restaurant.posConfig.locationId
+    });
+
+    const authResponse = await this.client.post(
+      '/authentication/v1/authentication/login',
+      {
+        clientId: credentials.clientId,
+        clientSecret: credentials.clientSecret,
+        userAccessType: 'TOAST_MACHINE_CLIENT'
+      }
+    );
+
+    return authResponse.data.token?.accessToken || authResponse.data.access_token;
+  }
+
+  /**
    * Fetch and store restaurant configuration including timezone
    */
   async fetchRestaurantConfig(restaurantId: string): Promise<{
@@ -90,11 +120,8 @@ export class ToastConfigService {
         throw new Error('Restaurant not connected to Toast');
       }
 
-      // Decrypt access token
-      const accessToken = EncryptionUtil.decrypt(
-        restaurant.posConfig.encryptedAccessToken!,
-        this.encryptionKey
-      );
+      // Get fresh access token
+      const accessToken = await this.getAccessToken(restaurantId);
 
       // Fetch restaurant configuration
       const response = await this.client.get<IToastRestaurantConfig>(
@@ -165,10 +192,8 @@ export class ToastConfigService {
         throw new Error('Restaurant not connected to Toast');
       }
 
-      const accessToken = EncryptionUtil.decrypt(
-        restaurant.posConfig.encryptedAccessToken!,
-        this.encryptionKey
-      );
+      // Get fresh access token
+      const accessToken = await this.getAccessToken(restaurantId);
 
       const response = await this.client.get<IToastServiceArea[]>(
         `/config/v2/serviceAreas`,
@@ -218,10 +243,8 @@ export class ToastConfigService {
         throw new Error('Restaurant not connected to Toast');
       }
 
-      const accessToken = EncryptionUtil.decrypt(
-        restaurant.posConfig.encryptedAccessToken!,
-        this.encryptionKey
-      );
+      // Get fresh access token
+      const accessToken = await this.getAccessToken(restaurantId);
 
       const response = await this.client.get<IToastRevenueCenter[]>(
         `/config/v2/revenueCenters`,
@@ -269,10 +292,8 @@ export class ToastConfigService {
         throw new Error('Restaurant not connected to Toast');
       }
 
-      const accessToken = EncryptionUtil.decrypt(
-        restaurant.posConfig.encryptedAccessToken!,
-        this.encryptionKey
-      );
+      // Get fresh access token
+      const accessToken = await this.getAccessToken(restaurantId);
 
       const response = await this.client.get<IToastDiningOption[]>(
         `/config/v2/diningOptions`,
