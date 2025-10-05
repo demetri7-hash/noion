@@ -5,6 +5,7 @@ import mongoose from 'mongoose';
 import { find as findTimezone } from 'geo-tz';
 import { toastIntegration } from '@/services/ToastIntegration';
 import { decryptToastCredentials } from '@/utils/toastEncryption';
+import { DateTime } from 'luxon';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,26 +39,19 @@ export async function GET(
       }
     }
 
-    // Get current time in restaurant's timezone
-    const now = new Date();
-    const nowInRestaurantTZ = new Date(now.toLocaleString('en-US', { timeZone: timezone }));
+    // Get current time using Luxon for proper timezone handling
+    const now = DateTime.now().setZone(timezone);
 
-    // Today's date range (midnight to now in restaurant timezone)
-    const todayStart = new Date(nowInRestaurantTZ);
-    todayStart.setHours(0, 0, 0, 0);
+    // Today: midnight to now in restaurant timezone
+    const todayStart = now.startOf('day');
+    const todayStartUTC = todayStart.toJSDate();
+    const todayEndUTC = now.toJSDate();
 
-    // Convert back to UTC for database query
-    const todayStartUTC = new Date(todayStart.toLocaleString('en-US', { timeZone: 'UTC' }));
-    const todayEndUTC = now;
-
-    // Yesterday's date range (midnight to same time yesterday in restaurant timezone)
-    const yesterdayStart = new Date(todayStart);
-    yesterdayStart.setDate(yesterdayStart.getDate() - 1);
-    const yesterdayStartUTC = new Date(yesterdayStart.toLocaleString('en-US', { timeZone: 'UTC' }));
-
-    const yesterdayEnd = new Date(nowInRestaurantTZ);
-    yesterdayEnd.setDate(yesterdayEnd.getDate() - 1);
-    const yesterdayEndUTC = new Date(yesterdayEnd.toLocaleString('en-US', { timeZone: 'UTC' }));
+    // Yesterday: midnight yesterday to same time yesterday
+    const yesterday = now.minus({ days: 1 });
+    const yesterdayStart = yesterday.startOf('day');
+    const yesterdayStartUTC = yesterdayStart.toJSDate();
+    const yesterdayEndUTC = yesterday.toJSDate();
 
     // Fetch today's transactions (using UTC dates for query)
     const todayTransactions = await Transaction.find({
