@@ -380,22 +380,14 @@ export class ToastIntegrationService {
         throw new Error('Restaurant not found');
       }
 
-      // Encrypt and store credentials
-      const encryptedAccessToken = EncryptionUtil.encrypt(
-        authResponse.token.accessToken,
-        this.encryptionKey
-      );
-
-      // Update restaurant with Toast connection info
-      restaurant.posConfig = {
-        type: POSSystemType.TOAST,
-        isConnected: true,
-        clientId: credentials.clientId,
-        encryptedAccessToken,
-        lastSyncAt: new Date(),
-        managementGroupId: authResponse.managementGroups?.[0]?.guid,
-        locationId: credentials.locationGuid
-      };
+      // Update restaurant connection status
+      // DON'T overwrite posConfig - it already has encrypted credentials from connect route
+      // Just update the connection status and sync time
+      restaurant.posConfig.isConnected = true;
+      restaurant.posConfig.lastSyncAt = new Date();
+      if (authResponse.managementGroups?.[0]?.guid) {
+        restaurant.posConfig.managementGroupId = authResponse.managementGroups[0].guid;
+      }
 
       await restaurant.save();
 
@@ -447,11 +439,17 @@ export class ToastIntegrationService {
         throw new Error('Restaurant not connected to Toast');
       }
 
-      // Decrypt access token
-      const accessToken = EncryptionUtil.decrypt(
-        restaurant.posConfig.encryptedAccessToken!,
-        this.encryptionKey
-      );
+      // Re-authenticate to get fresh access token
+      // (Access tokens expire, so we always authenticate fresh using stored credentials)
+      const { decryptToastCredentials } = await import('../utils/toastEncryption');
+      const credentials = decryptToastCredentials({
+        clientId: restaurant.posConfig.clientId,
+        encryptedClientSecret: restaurant.posConfig.encryptedClientSecret,
+        locationId: restaurant.posConfig.locationId
+      });
+
+      const authResponse = await this.authenticateRestaurant(credentials);
+      const accessToken = authResponse.token.accessToken;
 
       // Use /ordersBulk endpoint which supports up to 30-day ranges
       // Break into 30-day chunks if the date range is longer
