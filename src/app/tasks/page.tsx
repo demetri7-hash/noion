@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import MainLayout from '../../components/layout/MainLayout';
-import { CheckSquare, Calendar, Camera, FileSignature, FileText, Clock, AlertCircle, ChevronRight } from 'lucide-react';
+import { CheckSquare, Calendar, Camera, FileSignature, FileText, Clock, AlertCircle, ChevronRight, Settings } from 'lucide-react';
 import TaskCompletionModal from '../../components/tasks/TaskCompletionModal';
 
 interface Task {
@@ -31,12 +32,20 @@ interface Workflow {
 }
 
 export default function TasksPage() {
+  const router = useRouter();
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedWorkflow, setSelectedWorkflow] = useState<string | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [userRole, setUserRole] = useState<string>('');
 
   useEffect(() => {
+    // Get user role from localStorage
+    const user = localStorage.getItem('user');
+    if (user) {
+      const userData = JSON.parse(user);
+      setUserRole(userData.role || '');
+    }
     loadWorkflows();
   }, []);
 
@@ -121,6 +130,15 @@ export default function TasksPage() {
             <h1 className="text-2xl font-bold text-gray-900">Tasks & Workflows</h1>
             <p className="text-gray-600 mt-1">Complete your assigned tasks and workflows</p>
           </div>
+          {(userRole === 'owner' || userRole === 'admin' || userRole === 'manager') && (
+            <button
+              onClick={() => router.push('/tasks/manage')}
+              className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
+            >
+              <Settings className="h-5 w-5" />
+              Manage Workflows
+            </button>
+          )}
         </div>
 
         {/* Stats */}

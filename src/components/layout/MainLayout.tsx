@@ -177,6 +177,16 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       icon: CheckSquare,
     });
 
+    // Team Challenge (managers and owners only)
+    if (role === 'owner' || role === 'restaurant_owner' || role === 'admin' || role === 'manager') {
+      baseNav.push({
+        name: 'Team Challenge',
+        href: '/team-challenge',
+        icon: TrendingUp,
+        roles: ['owner', 'admin', 'manager']
+      });
+    }
+
     // Chat
     baseNav.push({
       name: 'Chat',
