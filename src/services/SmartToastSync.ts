@@ -587,6 +587,14 @@ export class SmartToastSync {
     console.log(`Period: ${estimate.firstOrderDate.toLocaleDateString()} to ${estimate.lastOrderDate.toLocaleDateString()}`);
     console.log(`Time Taken: ${Math.ceil((Date.now() - startTime) / (1000 * 60))} minutes`);
     console.log('═'.repeat(80) + '\n');
+
+    // Trigger pattern discovery in the background
+    if (totalImported > 0) {
+      console.log('🔬 Triggering pattern discovery in background...\n');
+      this.triggerPatternDiscovery(restaurantId).catch(error => {
+        console.error('⚠️  Pattern discovery trigger failed:', error.message);
+      });
+    }
   }
 
   /**
@@ -697,6 +705,44 @@ export class SmartToastSync {
       // Subsequent sync - only get new data
       console.log('🔄 Incremental sync...');
       await this.executeIncrementalSync(restaurantId, progressCallback);
+    }
+  }
+
+  /**
+   * Trigger pattern discovery in background after sync completes
+   */
+  private async triggerPatternDiscovery(restaurantId: string): Promise<void> {
+    try {
+      const { spawn } = await import('child_process');
+      const path = await import('path');
+
+      // Path to pattern discovery script
+      const scriptPath = path.join(process.cwd(), 'scripts', 'run-pattern-discovery.ts');
+
+      console.log(`🔬 Starting pattern discovery background job...`);
+      console.log(`   Script: ${scriptPath}`);
+      console.log(`   Restaurant: ${restaurantId}\n`);
+
+      // Spawn the pattern discovery script as a background process
+      const child = spawn('npx', ['tsx', scriptPath, restaurantId, '30'], {
+        detached: true,
+        stdio: 'ignore', // Don't pipe output to this process
+        env: {
+          ...process.env,
+          DATABASE_URL: process.env.DATABASE_URL
+        }
+      });
+
+      // Detach the child process so it continues running
+      child.unref();
+
+      console.log(`✅ Pattern discovery job started (PID: ${child.pid})`);
+      console.log(`   This will analyze the last 30 days of transactions`);
+      console.log(`   Results will appear on the Business Analytics page when complete\n`);
+
+    } catch (error: any) {
+      console.error('❌ Failed to trigger pattern discovery:', error.message);
+      throw error;
     }
   }
 }
