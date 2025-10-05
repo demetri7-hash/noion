@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { authorize } from '@/middleware/authorize';
-import Insight from '@/models/Insight';
+import Insight, { InsightStatus } from '@/models/Insight';
 import connectDB from '@/lib/mongodb';
 import { Types } from 'mongoose';
 
@@ -144,7 +144,7 @@ export async function PATCH(
 
     // Handle dismissal
     if (body.action === 'dismiss') {
-      insight.status = 'dismissed';
+      insight.status = InsightStatus.DISMISSED;
       await insight.save();
       return NextResponse.json({
         success: true,
