@@ -317,8 +317,17 @@ export default function OwnerWarRoom() {
               <p className="text-sm mt-1">Data will appear as transactions are recorded</p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {topStaff.slice(0, 5).map((staff, index) => (
+            <>
+              {topStaff.every(s => s.hoursWorked === 0) && (
+                <div className="mb-3 bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                  <p className="text-xs text-yellow-800">
+                    <AlertTriangle className="w-4 h-4 inline mr-1" />
+                    Labor hours unavailable. Enable Toast Labor module for hours tracking.
+                  </p>
+                </div>
+              )}
+              <div className="space-y-3">
+                {topStaff.slice(0, 5).map((staff, index) => (
                 <div
                   key={staff.id}
                   className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
@@ -335,7 +344,8 @@ export default function OwnerWarRoom() {
                     <div>
                       <div className="font-semibold text-gray-900">{staff.name}</div>
                       <div className="text-xs text-gray-500">
-                        {staff.transactions} transactions • {staff.hoursWorked}h worked
+                        {staff.transactions} transactions
+                        {staff.hoursWorked > 0 && ` • ${staff.hoursWorked}h worked`}
                       </div>
                     </div>
                   </div>
@@ -344,8 +354,9 @@ export default function OwnerWarRoom() {
                     <div className="text-xs text-gray-500">{formatCurrency(staff.avgTicket)} avg</div>
                   </div>
                 </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            </>
           )}
         </div>
       </div>
