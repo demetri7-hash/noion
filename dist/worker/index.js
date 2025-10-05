@@ -133,8 +133,14 @@ async function processSyncJob(job) {
  * Create and start the worker
  */
 function startWorker() {
+    const redisConnection = (0, redis_1.getRedisConnection)();
+    if (!redisConnection) {
+        console.error('❌ Redis connection not available. Worker cannot start.');
+        console.error('Please set REDIS_URL environment variable.');
+        process.exit(1);
+    }
     const worker = new bullmq_1.Worker(QUEUE_NAME, processSyncJob, {
-        connection: (0, redis_1.getRedisConnection)(),
+        connection: redisConnection,
         concurrency: 5, // Process up to 5 jobs simultaneously
         limiter: {
             max: 10, // Max 10 jobs

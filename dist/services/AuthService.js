@@ -90,14 +90,14 @@ class AuthService {
             // Create restaurant with owner
             const restaurant = new models_1.Restaurant({
                 name: userData.restaurantData.name,
+                type: userData.restaurantData.type,
                 location: {
                     address: userData.restaurantData.address,
                     city: userData.restaurantData.city,
                     state: userData.restaurantData.state,
                     zipCode: userData.restaurantData.zipCode,
-                    timezone: userData.restaurantData.timezone
+                    country: 'US'
                 },
-                cuisine: userData.restaurantData.cuisine,
                 owner: {
                     firstName: userData.firstName,
                     lastName: userData.lastName,
@@ -109,16 +109,39 @@ class AuthService {
                 status: 'trial',
                 subscription: {
                     plan: 'trial',
+                    tier: userData.restaurantData.subscriptionTier,
+                    status: 'trialing',
+                    startDate: new Date(),
+                    billingCycle: 'monthly',
+                    amount: 0, // Free trial - no payment required
+                    currency: 'USD',
                     trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 14 days trial
                 },
+                posConfig: {
+                    type: 'other',
+                    isConnected: false
+                },
+                analyticsSettings: {
+                    timezone: userData.restaurantData.timezone,
+                    businessHours: {
+                        monday: { open: '09:00', close: '22:00' },
+                        tuesday: { open: '09:00', close: '22:00' },
+                        wednesday: { open: '09:00', close: '22:00' },
+                        thursday: { open: '09:00', close: '22:00' },
+                        friday: { open: '09:00', close: '23:00' },
+                        saturday: { open: '09:00', close: '23:00' },
+                        sunday: { open: '10:00', close: '21:00' }
+                    },
+                    enableEmailReports: true,
+                    reportFrequency: 'weekly'
+                },
                 features: {
-                    posIntegration: true,
-                    aiInsights: true,
-                    customReports: false,
-                    multiLocation: false,
-                    advancedAnalytics: false,
-                    apiAccess: false,
-                    discoveryReportSent: false
+                    discoveryReportSent: false,
+                    hasViewedDashboard: false,
+                    hasGeneratedReport: false,
+                    enableVideoAnalytics: false,
+                    enableAudioAnalytics: false,
+                    enablePredictiveAnalytics: false
                 }
             });
             await restaurant.save();

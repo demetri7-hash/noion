@@ -205,18 +205,14 @@ class ToastIntegrationService {
             if (!restaurant) {
                 throw new Error('Restaurant not found');
             }
-            // Encrypt and store credentials
-            const encryptedAccessToken = EncryptionUtil.encrypt(authResponse.token.accessToken, this.encryptionKey);
-            // Update restaurant with Toast connection info
-            restaurant.posConfig = {
-                type: models_1.POSSystemType.TOAST,
-                isConnected: true,
-                clientId: credentials.clientId,
-                encryptedAccessToken,
-                lastSyncAt: new Date(),
-                managementGroupId: authResponse.managementGroups?.[0]?.guid,
-                locationId: credentials.locationGuid
-            };
+            // Update restaurant connection status
+            // DON'T overwrite posConfig - it already has encrypted credentials from connect route
+            // Just update the connection status and sync time
+            restaurant.posConfig.isConnected = true;
+            restaurant.posConfig.lastSyncAt = new Date();
+            if (authResponse.managementGroups?.[0]?.guid) {
+                restaurant.posConfig.managementGroupId = authResponse.managementGroups[0].guid;
+            }
             await restaurant.save();
             // Perform initial data sync and get imported count
             const ordersImported = await this.performInitialSync(restaurant._id, authResponse.token.accessToken);
@@ -259,8 +255,16 @@ class ToastIntegrationService {
             if (!restaurant || !restaurant.posConfig.isConnected) {
                 throw new Error('Restaurant not connected to Toast');
             }
-            // Decrypt access token
-            const accessToken = EncryptionUtil.decrypt(restaurant.posConfig.encryptedAccessToken, this.encryptionKey);
+            // Re-authenticate to get fresh access token
+            // (Access tokens expire, so we always authenticate fresh using stored credentials)
+            const { decryptToastCredentials } = await Promise.resolve().then(() => __importStar(require('../utils/toastEncryption')));
+            const credentials = decryptToastCredentials({
+                clientId: restaurant.posConfig.clientId,
+                encryptedClientSecret: restaurant.posConfig.encryptedClientSecret,
+                locationId: restaurant.posConfig.locationId
+            });
+            const authResponse = await this.authenticateRestaurant(credentials);
+            const accessToken = authResponse.token.accessToken;
             // Use /ordersBulk endpoint which supports up to 30-day ranges
             // Break into 30-day chunks if the date range is longer
             const allTransactions = [];
@@ -405,9 +409,9 @@ class ToastIntegrationService {
                 totalAmount: check.totalAmount,
                 payments,
                 employee: {
-                    id: toastTransaction.server?.guid || toastTransaction.createdEmployee?.guid || 'unknown',
-                    name: undefined, // Toast doesn't provide employee names in transaction data
-                    role: toastTransaction.server ? 'server' : 'cashier'
+                    id: toastTransaction.server?.guid || 'unassigned',
+                    name: toastTransaction.server?.guid ? undefined : (toastTransaction.source || 'System'),
+                    role: toastTransaction.server ? 'server' : 'system'
                 },
                 timing: {
                     orderStartedAt: new Date(toastTransaction.openedDate),
@@ -610,6 +614,35 @@ class ToastIntegrationService {
         catch (error) {
             console.error('Sync failed:', error);
             throw error;
+        }
+    }
+    /**
+     * Fetch employee time entries (hours worked) from Toast Labor API
+     */
+    async fetchTimeEntries(credentials, startDate, endDate) {
+        try {
+            // Get access token
+            const authResponse = await this.authenticateRestaurant(credentials);
+            const accessToken = authResponse.token.accessToken;
+            // Format dates for Toast API (ISO 8601)
+            const startDateStr = startDate.toISOString();
+            const endDateStr = endDate.toISOString();
+            // Make API request to get time entries
+            const response = await axios_1.default.get(`${TOAST_BASE_URL}/labor/v1/timeEntries`, {
+                params: {
+                    startDate: startDateStr,
+                    endDate: endDateStr
+                },
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Toast-Restaurant-External-ID': credentials.locationGuid
+                }
+            });
+            return response.data || [];
+        }
+        catch (error) {
+            console.error('Failed to fetch time entries from Toast:', error.response?.data || error.message);
+            return [];
         }
     }
 }

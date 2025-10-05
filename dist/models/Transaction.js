@@ -439,5 +439,6 @@ TransactionSchema.statics.findUpsellOpportunities = function (restaurantId, limi
         .sort({ 'analytics.missedUpsellValue': -1 })
         .limit(limit);
 };
-// Export the model
-exports.default = mongoose_1.default.model('Transaction', TransactionSchema);
+// Export the model (handle Next.js hot reload in dev mode)
+exports.default = mongoose_1.default.models.Transaction ||
+    mongoose_1.default.model('Transaction', TransactionSchema);

@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.RestaurantStatus = exports.SubscriptionTier = exports.POSSystemType = exports.RestaurantType = void 0;
+exports.UserRole = exports.RestaurantStatus = exports.SubscriptionTier = exports.POSSystemType = exports.RestaurantType = void 0;
 const mongoose_1 = __importStar(require("mongoose"));
 // Enum for restaurant types
 var RestaurantType;
@@ -74,6 +74,14 @@ var RestaurantStatus;
     RestaurantStatus["CHURNED"] = "churned";
     RestaurantStatus["PENDING_SETUP"] = "pending_setup";
 })(RestaurantStatus || (exports.RestaurantStatus = RestaurantStatus = {}));
+// Enum for user roles (Employee Management System)
+var UserRole;
+(function (UserRole) {
+    UserRole["OWNER"] = "owner";
+    UserRole["ADMIN"] = "admin";
+    UserRole["MANAGER"] = "manager";
+    UserRole["EMPLOYEE"] = "employee";
+})(UserRole || (exports.UserRole = UserRole = {}));
 // Mongoose schema definition
 const RestaurantSchema = new mongoose_1.Schema({
     // Owner information
@@ -89,12 +97,28 @@ const RestaurantSchema = new mongoose_1.Schema({
         phone: { type: String, required: true },
         title: { type: String, trim: true },
         password: { type: String, required: true },
-        role: { type: String, default: 'restaurant_owner' },
+        role: {
+            type: String,
+            enum: [...Object.values(UserRole), 'restaurant_owner', 'restaurant_manager', 'restaurant_staff'], // Support legacy and new roles
+            default: UserRole.OWNER
+        },
         passwordResetToken: { type: String },
         passwordResetExpires: { type: Date },
         failedLoginAttempts: { type: Number, default: 0 },
         lockoutUntil: { type: Date },
-        lastLoginAt: { type: Date }
+        lastLoginAt: { type: Date },
+        // Employee Management System fields
+        employeeId: { type: String },
+        hireDate: { type: Date },
+        isActive: { type: Boolean, default: true },
+        // Gamification fields
+        points: { type: Number, default: 0, min: 0 },
+        level: { type: Number, default: 1, min: 1, max: 10 },
+        streak: { type: Number, default: 0, min: 0 },
+        lastActivityDate: { type: Date },
+        // Permissions cache
+        cachedPermissions: [{ type: String }],
+        permissionsCachedAt: { type: Date }
     },
     // Restaurant details
     name: { type: String, required: true, trim: true },
@@ -126,7 +150,14 @@ const RestaurantSchema = new mongoose_1.Schema({
         clientId: { type: String },
         encryptedAccessToken: { type: String },
         encryptedRefreshToken: { type: String },
+        encryptedClientSecret: { type: String },
         lastSyncAt: { type: Date },
+        syncInterval: {
+            type: String,
+            enum: ['manual', 'on_login', 'hourly', 'daily'],
+            default: 'on_login'
+        },
+        isActive: { type: Boolean, default: false },
         webhookUrl: { type: String },
         webhookSecret: { type: String },
         locationId: { type: String },
@@ -187,6 +218,11 @@ const RestaurantSchema = new mongoose_1.Schema({
         type: String,
         enum: Object.values(RestaurantStatus),
         default: RestaurantStatus.TRIAL
+    },
+    // Team and employee management
+    team: {
+        type: mongoose_1.Schema.Types.Mixed,
+        default: () => ({ employees: [] })
     },
     analyticsSettings: {
         timezone: { type: String, default: 'America/New_York' },
@@ -308,5 +344,6 @@ RestaurantSchema.statics.findTrialExpiring = function (days = 3) {
 RestaurantSchema.statics.findByPOSType = function (posType) {
     return this.find({ 'posConfig.type': posType });
 };
-// Export the model
-exports.default = mongoose_1.default.model('Restaurant', RestaurantSchema);
+// Export the model (handle Next.js hot reload in dev mode)
+exports.default = mongoose_1.default.models.Restaurant ||
+    mongoose_1.default.model('Restaurant', RestaurantSchema);

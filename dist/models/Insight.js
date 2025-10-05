@@ -394,5 +394,6 @@ InsightSchema.statics.getEngagementStats = function (restaurantId) {
         }
     ]);
 };
-// Export the model
-exports.default = mongoose_1.default.model('Insight', InsightSchema);
+// Export the model (handle Next.js hot reload in dev mode)
+exports.default = mongoose_1.default.models.Insight ||
+    mongoose_1.default.model('Insight', InsightSchema);

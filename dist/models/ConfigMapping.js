@@ -137,4 +137,6 @@ ConfigMappingSchema.statics.getMappingsForType = async function (restaurantId, t
     });
     return map;
 };
-exports.ConfigMapping = mongoose_1.default.model('ConfigMapping', ConfigMappingSchema);
+// Export the model (handle Next.js hot reload in dev mode)
+exports.ConfigMapping = mongoose_1.default.models.ConfigMapping ||
+    mongoose_1.default.model('ConfigMapping', ConfigMappingSchema);

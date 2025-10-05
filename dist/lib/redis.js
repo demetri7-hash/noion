@@ -19,6 +19,11 @@ function getRedisConnection() {
     }
     const redisUrl = process.env.REDIS_URL;
     if (!redisUrl) {
+        // In development, Redis is optional - return null to skip queue operations
+        if (process.env.NODE_ENV === 'development') {
+            console.warn('⚠️  Redis not configured - background jobs disabled in development');
+            return null;
+        }
         throw new Error('REDIS_URL environment variable is not set. ' +
             'Please create a Redis instance at https://upstash.com and add the URL to your environment variables.');
     }
