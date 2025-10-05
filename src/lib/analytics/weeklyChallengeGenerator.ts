@@ -95,10 +95,12 @@ export async function generateWeeklyChallenge(
   const avgDailyOrders = Math.round(transactions.length / daysAnalyzed);
 
   // Build item catalog with frequency
+  // Focus on actual upsells: items under $7, drinks, desserts
   const itemCatalog = new Map<string, {
     prices: number[];
     count: number;
     category: string;
+    isModifier: boolean;
   }>();
 
   transactions.forEach((tx: any) => {
@@ -106,17 +108,47 @@ export async function generateWeeklyChallenge(
       const itemName = item.name || 'Unknown';
       if (itemName === 'Unknown' || itemName === 'MenuItem') return;
 
+      const price = item.unitPrice || 0;
+      const isUpsellCandidate = isUpsellItem(itemName, price);
+
+      if (!isUpsellCandidate) return; // Skip main menu items
+
       if (!itemCatalog.has(itemName)) {
         itemCatalog.set(itemName, {
           prices: [],
           count: 0,
-          category: item.category || 'General'
+          category: item.category || 'General',
+          isModifier: false
         });
       }
 
       const catalogItem = itemCatalog.get(itemName)!;
-      catalogItem.prices.push(item.unitPrice || 0);
+      catalogItem.prices.push(price);
       catalogItem.count++;
+    });
+
+    // Also track modifiers (these are pure add-ons)
+    tx.items?.forEach((item: any) => {
+      item.modifiers?.forEach((mod: any) => {
+        const modName = mod.name || 'Unknown';
+        const modPrice = mod.price || 0;
+
+        // Only modifiers between $0.50-$7 (meaningful upsells)
+        if (modPrice < 0.5 || modPrice > 7) return;
+
+        if (!itemCatalog.has(modName)) {
+          itemCatalog.set(modName, {
+            prices: [],
+            count: 0,
+            category: 'Add-on',
+            isModifier: true
+          });
+        }
+
+        const catalogItem = itemCatalog.get(modName)!;
+        catalogItem.prices.push(modPrice);
+        catalogItem.count++;
+      });
     });
   });
 
@@ -127,20 +159,30 @@ export async function generateWeeklyChallenge(
       category: data.category,
       avgPrice: data.prices.reduce((sum, p) => sum + p, 0) / data.prices.length,
       count: data.count,
-      penetration: (data.count / transactions.length) * 100
+      penetration: (data.count / transactions.length) * 100,
+      isModifier: data.isModifier
     }))
     .filter(item => {
-      // Good candidates:
-      // - Between 5% and 40% penetration (room for growth)
-      // - Price > $2 (meaningful revenue)
-      // - At least 50 orders (proven demand)
-      return item.penetration >= 5 &&
-             item.penetration <= 40 &&
-             item.avgPrice >= 2 &&
-             item.count >= 50;
+      // Good candidates for upsells:
+      // - Modifiers: Between 1% and 60% penetration (lots of growth room)
+      // - Menu items: Between 3% and 50% penetration
+      // - Price between $0.50-$7 (meaningful but not too expensive)
+      // - At least 10 orders (proven demand, lower threshold for add-ons)
+
+      const minPenetration = item.isModifier ? 1 : 3;
+      const maxPenetration = item.isModifier ? 60 : 50;
+
+      return item.penetration >= minPenetration &&
+             item.penetration <= maxPenetration &&
+             item.avgPrice >= 0.5 &&
+             item.avgPrice <= 7 &&
+             item.count >= 10;
     })
     .sort((a, b) => {
-      // Prioritize by potential revenue (price * room for growth)
+      // Prioritize modifiers (pure add-ons) and by potential revenue
+      if (a.isModifier && !b.isModifier) return -1;
+      if (!a.isModifier && b.isModifier) return 1;
+
       const potentialA = a.avgPrice * (100 - a.penetration);
       const potentialB = b.avgPrice * (100 - b.penetration);
       return potentialB - potentialA;
@@ -251,12 +293,23 @@ function selectDiverseItems(candidates: any[], count: number): any[] {
 function generateChallengeText(day: string, itemName: string, price: number): string {
   const priceStr = `$${price.toFixed(2)}`;
 
-  const templates = [
+  // Check if it's an add-on/modifier based on name
+  const isAddon = itemName.toLowerCase().includes('add') ||
+                  itemName.toLowerCase().includes('extra') ||
+                  itemName.toLowerCase().includes('double');
+
+  const templates = isAddon ? [
+    `${day}'s Challenge: Suggest adding "${itemName}" (${priceStr}) to every order!`,
+    `🎯 ${day}: Recommend "${itemName}" as an upgrade - ${priceStr}!`,
+    `Today's Mission (${day}): Add "${itemName}" to as many orders as possible!`,
+    `${day} Goal: Get "${itemName}" on every order - ${priceStr} add-on!`,
+    `Challenge for ${day}: Make "${itemName}" your #1 suggestion!`
+  ] : [
     `${day}'s Challenge: Suggest "${itemName}" (${priceStr}) to every customer!`,
     `🎯 ${day}: Add "${itemName}" to as many orders as possible!`,
     `Today's Mission (${day}): Upsell "${itemName}" - ${priceStr} each!`,
     `${day} Goal: Get customers excited about "${itemName}"!`,
-    `Challenge for ${day}: Make "${itemName}" your go-to recommendation!`
+    `Challenge for ${day}: Recommend "${itemName}" with every order!`
   ];
 
   // Pick template based on day of week
@@ -333,4 +386,31 @@ export function formatChallengeForTeam(challenge: WeeklyChallenge): string {
   lines.push('Let\'s make it happen team! 💪');
 
   return lines.join('\n');
+}
+
+/**
+ * Determine if an item is a valid upsell candidate
+ * Includes: items under $7, drinks, desserts
+ * Excludes: main menu items (bowls, wraps, pitas over $7)
+ */
+function isUpsellItem(itemName: string, price: number): boolean {
+  const nameLower = itemName.toLowerCase();
+
+  // Always include drinks
+  if (nameLower.match(/(drink|soda|juice|water|lemonade|tea|coffee|smoothie|shake|beverage|coke|pepsi|sprite|fountain)/i)) {
+    return true;
+  }
+
+  // Always include desserts
+  if (nameLower.match(/(dessert|cake|pie|ice cream|cookie|brownie|sweet|baklava)/i)) {
+    return true;
+  }
+
+  // Include sides, appetizers, and other items under $7
+  if (price < 7) {
+    return true;
+  }
+
+  // Exclude expensive main items (bowls, wraps, pitas, plates over $7)
+  return false;
 }
