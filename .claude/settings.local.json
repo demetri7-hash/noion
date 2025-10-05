@@ -41,7 +41,10 @@
       "Bash(unzip:*)",
       "WebFetch(domain:toastintegrations.redoc.ly)",
       "Read(//Users/demetrigregorakis/Desktop/HUMAN ANALYTICS/NEW TO ADD TO GIT/**)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(npx tsx:*)",
+      "Bash(DATABASE_URL='mongodb+srv://demetri7_db_user:L9THnfRUfAWnmggK@noion-cluster.wsnmmhg.mongodb.net/noion' npx tsx sync-toast.ts)"
     ],
     "deny": [],
     "ask": []

@@ -663,9 +663,378 @@ export class HolidayService {
 }
 
 // ============================================================================
+// SPORTS EVENTS DATA (NFL, NBA, MLB, NHL)
+// ============================================================================
+
+export interface SportsGame {
+  id: string;
+  league: 'NFL' | 'NBA' | 'MLB' | 'NHL' | 'MLS';
+  homeTeam: string;
+  awayTeam: string;
+  homeTeamId: string;
+  awayTeamId: string;
+  gameDate: Date;
+  venue: string;
+  venueLat?: number;
+  venueLon?: number;
+  status: 'scheduled' | 'in_progress' | 'completed' | 'postponed';
+  homeScore?: number;
+  awayScore?: number;
+  expectedAttendance: number;
+  distance?: number; // Miles from restaurant
+  impactLevel: 'low' | 'medium' | 'high' | 'critical';
+  isHomeGame: boolean; // If local team is playing at home
+  isRivalry: boolean; // Derby/rivalry game = higher impact
+  teamPopularity: 'low' | 'medium' | 'high'; // Local team following
+}
+
+export class SportsService {
+  private theSportsDbKey = '3'; // Free tier key
+  private baseUrl = 'https://www.thesportsdb.com/api/v1/json/3';
+
+  // Major US sports team locations (lat/lon for distance calc)
+  private teamLocations: Map<string, { lat: number; lon: number; city: string }> = new Map([
+    // NFL
+    ['San Francisco 49ers', { lat: 37.4032, lon: -121.9696, city: 'Santa Clara' }],
+    ['Los Angeles Rams', { lat: 34.0141, lon: -118.2879, city: 'Los Angeles' }],
+    ['Los Angeles Chargers', { lat: 34.0141, lon: -118.2879, city: 'Los Angeles' }],
+    ['Las Vegas Raiders', { lat: 36.0909, lon: -115.1833, city: 'Las Vegas' }],
+    ['Seattle Seahawks', { lat: 47.5952, lon: -122.3316, city: 'Seattle' }],
+
+    // NBA
+    ['Sacramento Kings', { lat: 38.5802, lon: -121.4997, city: 'Sacramento' }],
+    ['Golden State Warriors', { lat: 37.7680, lon: -122.3877, city: 'San Francisco' }],
+    ['Los Angeles Lakers', { lat: 34.0430, lon: -118.2673, city: 'Los Angeles' }],
+    ['Los Angeles Clippers', { lat: 34.0430, lon: -118.2673, city: 'Los Angeles' }],
+
+    // MLB
+    ['San Francisco Giants', { lat: 37.7786, lon: -122.3893, city: 'San Francisco' }],
+    ['Oakland Athletics', { lat: 37.7516, lon: -122.2005, city: 'Oakland' }],
+    ['Los Angeles Dodgers', { lat: 34.0739, lon: -118.2400, city: 'Los Angeles' }],
+    ['Los Angeles Angels', { lat: 33.8003, lon: -117.8827, city: 'Anaheim' }],
+    ['San Diego Padres', { lat: 32.7073, lon: -117.1566, city: 'San Diego' }],
+
+    // NHL
+    ['San Jose Sharks', { lat: 37.3327, lon: -121.9010, city: 'San Jose' }],
+    ['Anaheim Ducks', { lat: 33.8075, lon: -117.8765, city: 'Anaheim' }],
+    ['Los Angeles Kings', { lat: 34.0430, lon: -118.2673, city: 'Los Angeles' }],
+  ]);
+
+  /**
+   * Get games on a specific date near a location
+   */
+  async getGamesOnDate(
+    date: Date,
+    restaurantLat: number,
+    restaurantLon: number,
+    radiusMiles: number = 50
+  ): Promise<SportsGame[]> {
+    const games: SportsGame[] = [];
+
+    // Format date for API (YYYY-MM-DD)
+    const dateStr = date.toISOString().split('T')[0];
+
+    // Fetch games from each league
+    const leagues = [
+      { name: 'NFL', id: '4391' },
+      { name: 'NBA', id: '4387' },
+      { name: 'MLB', id: '4424' },
+      { name: 'NHL', id: '4380' },
+    ];
+
+    for (const league of leagues) {
+      try {
+        const leagueGames = await this.getLeagueGamesOnDate(
+          league.name as any,
+          league.id,
+          dateStr,
+          restaurantLat,
+          restaurantLon,
+          radiusMiles
+        );
+        games.push(...leagueGames);
+      } catch (error) {
+        console.error(`Error fetching ${league.name} games:`, error);
+      }
+    }
+
+    return games.sort((a, b) => a.distance! - b.distance!);
+  }
+
+  /**
+   * Get games for a specific league on a date
+   */
+  private async getLeagueGamesOnDate(
+    league: SportsGame['league'],
+    leagueId: string,
+    dateStr: string,
+    restaurantLat: number,
+    restaurantLon: number,
+    radiusMiles: number
+  ): Promise<SportsGame[]> {
+    try {
+      // TheSportsDB format: eventsbyleague
+      const response = await axios.get(
+        `${this.baseUrl}/eventsday.php?d=${dateStr}&l=${leagueId}`
+      );
+
+      if (!response.data?.events) {
+        return [];
+      }
+
+      const games: SportsGame[] = [];
+
+      for (const event of response.data.events) {
+        const homeTeam = event.strHomeTeam;
+        const awayTeam = event.strAwayTeam;
+
+        // Get venue location
+        const teamLocation = this.teamLocations.get(homeTeam);
+        if (!teamLocation) continue; // Skip if we don't have location data
+
+        // Calculate distance
+        const distance = this.calculateDistance(
+          restaurantLat,
+          restaurantLon,
+          teamLocation.lat,
+          teamLocation.lon
+        );
+
+        // Only include games within radius
+        if (distance > radiusMiles) continue;
+
+        const gameDate = new Date(event.strTimestamp || event.dateEvent);
+
+        // Determine if it's a local team
+        const isLocalHomeGame = distance < 30;
+
+        // Check if rivalry game (simple heuristic - can be improved)
+        const isRivalry = this.isRivalryGame(homeTeam, awayTeam);
+
+        // Estimate attendance based on venue/league
+        const expectedAttendance = this.estimateAttendance(league, event.intSpectators);
+
+        games.push({
+          id: event.idEvent,
+          league,
+          homeTeam,
+          awayTeam,
+          homeTeamId: event.idHomeTeam,
+          awayTeamId: event.idAwayTeam,
+          gameDate,
+          venue: event.strVenue || teamLocation.city,
+          venueLat: teamLocation.lat,
+          venueLon: teamLocation.lon,
+          status: this.parseGameStatus(event.strStatus),
+          homeScore: event.intHomeScore ? parseInt(event.intHomeScore) : undefined,
+          awayScore: event.intAwayScore ? parseInt(event.intAwayScore) : undefined,
+          expectedAttendance,
+          distance,
+          impactLevel: this.calculateSportsImpact(
+            distance,
+            expectedAttendance,
+            isLocalHomeGame,
+            isRivalry,
+            league
+          ),
+          isHomeGame: isLocalHomeGame,
+          isRivalry,
+          teamPopularity: this.getTeamPopularity(homeTeam)
+        });
+      }
+
+      return games;
+    } catch (error) {
+      console.error(`Error fetching ${league} schedule:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * Check if this is a rivalry game
+   */
+  private isRivalryGame(homeTeam: string, awayTeam: string): boolean {
+    const rivalries = [
+      // NFL
+      ['San Francisco 49ers', 'Seattle Seahawks'],
+      ['San Francisco 49ers', 'Los Angeles Rams'],
+      ['Oakland Raiders', 'Kansas City Chiefs'],
+
+      // NBA
+      ['Los Angeles Lakers', 'Los Angeles Clippers'],
+      ['Golden State Warriors', 'Los Angeles Lakers'],
+      ['Sacramento Kings', 'Golden State Warriors'],
+
+      // MLB
+      ['San Francisco Giants', 'Los Angeles Dodgers'],
+      ['Oakland Athletics', 'San Francisco Giants'],
+
+      // NHL
+      ['San Jose Sharks', 'Los Angeles Kings'],
+      ['Anaheim Ducks', 'Los Angeles Kings'],
+    ];
+
+    return rivalries.some(([team1, team2]) =>
+      (homeTeam === team1 && awayTeam === team2) ||
+      (homeTeam === team2 && awayTeam === team1)
+    );
+  }
+
+  /**
+   * Get team popularity in the area
+   */
+  private getTeamPopularity(teamName: string): 'low' | 'medium' | 'high' {
+    // Major market teams
+    const highPopularity = [
+      'Golden State Warriors',
+      'Los Angeles Lakers',
+      'San Francisco 49ers',
+      'Los Angeles Dodgers',
+      'Sacramento Kings'
+    ];
+
+    const mediumPopularity = [
+      'San Francisco Giants',
+      'Los Angeles Rams',
+      'Los Angeles Clippers',
+      'San Jose Sharks'
+    ];
+
+    if (highPopularity.includes(teamName)) return 'high';
+    if (mediumPopularity.includes(teamName)) return 'medium';
+    return 'low';
+  }
+
+  /**
+   * Calculate sports event impact on restaurant
+   */
+  private calculateSportsImpact(
+    distance: number,
+    attendance: number,
+    isHomeGame: boolean,
+    isRivalry: boolean,
+    league: SportsGame['league']
+  ): SportsGame['impactLevel'] {
+    let score = 0;
+
+    // Distance scoring (0-30 points)
+    if (distance < 1) score += 30;
+    else if (distance < 5) score += 25;
+    else if (distance < 10) score += 15;
+    else if (distance < 30) score += 8;
+
+    // Home game bonus (0-20 points)
+    if (isHomeGame) score += 20;
+
+    // Attendance (0-20 points)
+    if (attendance > 50000) score += 20;
+    else if (attendance > 30000) score += 15;
+    else if (attendance > 15000) score += 10;
+    else score += 5;
+
+    // Rivalry bonus (0-15 points)
+    if (isRivalry) score += 15;
+
+    // League popularity (0-15 points)
+    const leagueScores = { NFL: 15, NBA: 12, MLB: 10, NHL: 8, MLS: 5 };
+    score += leagueScores[league] || 5;
+
+    // Determine impact
+    if (score >= 70) return 'critical';
+    if (score >= 50) return 'high';
+    if (score >= 30) return 'medium';
+    return 'low';
+  }
+
+  /**
+   * Estimate game attendance
+   */
+  private estimateAttendance(league: SportsGame['league'], reported?: string): number {
+    if (reported) {
+      const parsed = parseInt(reported);
+      if (!isNaN(parsed)) return parsed;
+    }
+
+    // Average attendance by league
+    const averages = {
+      NFL: 67000,
+      MLB: 28000,
+      NBA: 17500,
+      NHL: 17000,
+      MLS: 21000
+    };
+
+    return averages[league] || 20000;
+  }
+
+  /**
+   * Parse game status
+   */
+  private parseGameStatus(status?: string): SportsGame['status'] {
+    if (!status) return 'scheduled';
+    const lower = status.toLowerCase();
+    if (lower.includes('postponed') || lower.includes('cancelled')) return 'postponed';
+    if (lower.includes('final') || lower.includes('ft')) return 'completed';
+    if (lower.includes('live') || lower.includes('progress')) return 'in_progress';
+    return 'scheduled';
+  }
+
+  /**
+   * Calculate distance between two coordinates
+   */
+  private calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const R = 3959; // Earth's radius in miles
+    const dLat = this.toRad(lat2 - lat1);
+    const dLon = this.toRad(lon2 - lon1);
+
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(this.toRad(lat1)) * Math.cos(this.toRad(lat2)) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }
+
+  private toRad(degrees: number): number {
+    return degrees * (Math.PI / 180);
+  }
+
+  /**
+   * Get upcoming games for local teams
+   */
+  async getUpcomingLocalGames(
+    restaurantLat: number,
+    restaurantLon: number,
+    days: number = 7,
+    radiusMiles: number = 30
+  ): Promise<SportsGame[]> {
+    const allGames: SportsGame[] = [];
+    const today = new Date();
+
+    for (let i = 0; i < days; i++) {
+      const date = new Date(today);
+      date.setDate(date.getDate() + i);
+
+      const dayGames = await this.getGamesOnDate(
+        date,
+        restaurantLat,
+        restaurantLon,
+        radiusMiles
+      );
+
+      allGames.push(...dayGames);
+    }
+
+    return allGames;
+  }
+}
+
+// ============================================================================
 // EXPORT SINGLETON INSTANCES
 // ============================================================================
 
 export const weatherService = new WeatherService();
 export const eventsService = new EventsService();
 export const holidayService = new HolidayService();
+export const sportsService = new SportsService();
