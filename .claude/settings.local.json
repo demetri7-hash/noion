@@ -2,7 +2,7 @@
   "permissions": {
     "allow": [
       "Bash(DATABASE_URL='mongodb+srv://demetri7_db_user:L9THnfRUfAWnmggK@noion-cluster.wsnmmhg.mongodb.net/noion' npx tsx scripts/analyze-upsell-opportunities.ts 68e0bd8a603ef36c8257e021)",
-      "Bash(DATABASE_URL='mongodb+srv://demetri7_db_user:L9THnfRUfAWnmggK@noion-cluster.wsnmmhg.mongodb.net/noion' REDIS_URL='redis://default:SdKbgwGDTyEhfaXIWwjsUnINOTYOwKBn@monorail.proxy.rlwy.net:53819' npx tsx scripts/clear-and-resync.ts 68e0bd8a603ef36c8257e021)"
+      "Bash(DATABASE_URL='mongodb+srv://demetri7_db_user:L9THnfRUfAWnmggK@noion-cluster.wsnmmhg.mongodb.net/noion' npx tsx scripts/test-weekly-challenge.ts 68e0bd8a603ef36c8257e021)"
     ],
     "deny": [],
     "ask": []
