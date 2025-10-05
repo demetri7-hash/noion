@@ -44,7 +44,12 @@
       "Bash(git checkout:*)",
       "mcp__ide__getDiagnostics",
       "Bash(npx tsx:*)",
-      "Bash(DATABASE_URL='mongodb+srv://demetri7_db_user:L9THnfRUfAWnmggK@noion-cluster.wsnmmhg.mongodb.net/noion' npx tsx sync-toast.ts)"
+      "Bash(DATABASE_URL='mongodb+srv://demetri7_db_user:L9THnfRUfAWnmggK@noion-cluster.wsnmmhg.mongodb.net/noion' npx tsx sync-toast.ts)",
+      "Bash(DATABASE_URL='mongodb+srv://demetri7_db_user:L9THnfRUfAWnmggK@noion-cluster.wsnmmhg.mongodb.net/noion' npx tsx scripts/check-sync-status.ts 68e0bd8a603ef36c8257e021)",
+      "Bash(DATABASE_URL='mongodb+srv://demetri7_db_user:L9THnfRUfAWnmggK@noion-cluster.wsnmmhg.mongodb.net/noion' ENCRYPTION_KEY='m3n4o5p6q7r8_production_encryption_key' npx tsx scripts/verify-toast-credentials.ts 68e0bd8a603ef36c8257e021)",
+      "Read(//Users/demetrigregorakis/NOION/**)",
+      "Bash(ls:*)",
+      "Bash(git reset:*)"
     ],
     "deny": [],
     "ask": []

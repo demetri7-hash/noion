@@ -30,13 +30,29 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { locationGuid, clientId, clientSecret } = body;
 
-    console.log('Connect request body:', {
-      hasLocationGuid: !!locationGuid,
-      hasClientId: !!clientId,
-      hasClientSecret: !!clientSecret,
-      locationGuidLength: locationGuid?.length,
-      clientIdLength: clientId?.length,
-      clientSecretLength: clientSecret?.length
+    console.log('🔍 DETAILED CREDENTIAL INSPECTION:', {
+      locationGuid: {
+        hasValue: !!locationGuid,
+        length: locationGuid?.length,
+        value: locationGuid,
+        type: typeof locationGuid
+      },
+      clientId: {
+        hasValue: !!clientId,
+        length: clientId?.length,
+        value: clientId,
+        type: typeof clientId
+      },
+      clientSecret: {
+        hasValue: !!clientSecret,
+        length: clientSecret?.length,
+        first50: clientSecret?.substring(0, 50),
+        last10: clientSecret?.substring(clientSecret.length - 10),
+        type: typeof clientSecret,
+        startsWithTimestamp: clientSecret?.match(/^\d{4}-\d{2}-\d{2}T/) ? 'YES - LOOKS LIKE LOGS!' : 'NO',
+        looksLikeBase64: clientSecret?.match(/^[A-Za-z0-9+/=]+$/) ? 'YES' : 'NO',
+        looksLikeToastSecret: clientSecret?.match(/^[A-Za-z0-9\-_]+$/) && clientSecret?.length > 40 && clientSecret?.length < 100 ? 'YES' : 'NO'
+      }
     });
 
     // Validate inputs
