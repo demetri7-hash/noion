@@ -89,11 +89,14 @@ export async function GET(
       : 0;
 
     // Find peak hour today
+    // Note: analytics.hourOfDay is stored in UTC, need to convert to restaurant timezone
     const hourlyRevenue: { [hour: number]: number } = {};
     todayTransactions.forEach(t => {
-      if (t.analytics?.hourOfDay !== undefined) {
-        const hour = t.analytics.hourOfDay;
-        hourlyRevenue[hour] = (hourlyRevenue[hour] || 0) + (t.totalAmount || 0);
+      if (t.analytics?.hourOfDay !== undefined && t.transactionDate) {
+        // Convert UTC hour to restaurant timezone hour
+        const txnDate = DateTime.fromJSDate(new Date(t.transactionDate)).setZone(timezone);
+        const localHour = txnDate.hour;
+        hourlyRevenue[localHour] = (hourlyRevenue[localHour] || 0) + (t.totalAmount || 0);
       }
     });
 
