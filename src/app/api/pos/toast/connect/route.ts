@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { authorize } from '../../../../../middleware/authorize';
 import Restaurant, { POSSystemType } from '../../../../../models/Restaurant';
 import SyncJob from '../../../../../models/SyncJob';
-import { enqueueSyncJob } from '../../../../../lib/queue';
+import { enqueueSyncJob } from '../../../../../lib/mongoQueue';
 import { encryptToastCredentials } from '../../../../../utils/toastEncryption';
 import connectDB from '../../../../../lib/mongodb';
 
@@ -119,11 +119,6 @@ export async function POST(request: NextRequest) {
     const jobId = await enqueueSyncJob({
       restaurantId: user.restaurantId,
       posType: 'toast',
-      credentials: {
-        clientId,
-        clientSecret,
-        locationGuid
-      },
       options: {
         startDate,
         endDate: now,

@@ -12,7 +12,9 @@
       "Bash(DATABASE_URL='mongodb+srv://demetri7_db_user:L9THnfRUfAWnmggK@noion-cluster.wsnmmhg.mongodb.net/noion' npx tsx scripts/run-smart-toast-sync.ts 68e0bd8a603ef36c8257e021)",
       "Bash(DATABASE_URL='mongodb+srv://demetri7_db_user:L9THnfRUfAWnmggK@noion-cluster.wsnmmhg.mongodb.net/noion' ENCRYPTION_KEY='m3n4o5p6q7r8_production_encryption_key' npx tsx scripts/run-smart-toast-sync.ts 68e0bd8a603ef36c8257e021)",
       "Bash(curl:*)",
-      "Bash(echo \"Check browser console for auth token. Run this in browser DevTools console:\nlocalStorage.getItem(''authToken'') || localStorage.getItem(''token'')\")"
+      "Bash(echo \"Check browser console for auth token. Run this in browser DevTools console:\nlocalStorage.getItem(''authToken'') || localStorage.getItem(''token'')\")",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nfix: Complete migration from Redis/BullMQ to MongoDB queue\n\nUpdates all API routes and scripts to use the new MongoDB-based queue system instead of Redis/BullMQ. This eliminates the Upstash Redis max requests limit error.\n\nChanges:\n- Replace @/lib/queue imports with @/lib/mongoQueue across all routes\n- Remove credentials parameter from enqueueSyncJob calls (not supported in new queue)\n- Update scripts/clear-and-resync.ts to use new queue interface\n- Fix TypeScript error in mongoQueue.ts getNextJob function\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
     ],
     "deny": [],
     "ask": []

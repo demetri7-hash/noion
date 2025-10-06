@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import SyncJob from '@/models/SyncJob';
-import { getJobStatus } from '@/lib/queue';
+import { getJobStatus } from '@/lib/mongoQueue';
 
 /**
  * GET /api/sync-jobs/[id]

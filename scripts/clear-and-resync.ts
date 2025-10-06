@@ -3,7 +3,7 @@
  */
 import mongoose from 'mongoose';
 import { Transaction } from '../src/models';
-import { enqueueSyncJob } from '../src/lib/queue';
+import { enqueueSyncJob } from '../src/lib/mongoQueue';
 
 async function clearAndResync() {
   const restaurantId = process.argv[2] || '68e0bd8a603ef36c8257e021';
@@ -29,13 +29,15 @@ async function clearAndResync() {
     const endDate = new Date();
     const startDate = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
 
-    const jobId = await enqueueSyncJob(
+    const jobId = await enqueueSyncJob({
       restaurantId,
-      'toast',
-      startDate,
-      endDate,
-      { priority: 1 }
-    );
+      posType: 'toast',
+      options: {
+        startDate,
+        endDate,
+        fullSync: true
+      }
+    });
 
     console.log(`✅ Sync job enqueued: ${jobId}`);
     console.log(`   Date range: ${startDate.toISOString()} to ${endDate.toISOString()}`);

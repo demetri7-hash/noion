@@ -3,7 +3,7 @@ import { authorize } from '@/middleware/authorize';
 import connectDB from '@/lib/mongodb';
 import Restaurant from '@/models/Restaurant';
 import { decryptToastCredentials } from '@/utils/toastEncryption';
-import { enqueueSyncJob } from '@/lib/queue';
+import { enqueueSyncJob } from '@/lib/mongoQueue';
 import SyncJob from '@/models/SyncJob';
 
 export const dynamic = 'force-dynamic';
@@ -87,11 +87,6 @@ export async function POST(request: NextRequest) {
     const jobId = await enqueueSyncJob({
       restaurantId: String(restaurant._id),
       posType: 'toast',
-      credentials: {
-        clientId: credentials.clientId,
-        clientSecret: credentials.clientSecret,
-        locationGuid: credentials.locationGuid
-      },
       options: {
         startDate,
         endDate: now,

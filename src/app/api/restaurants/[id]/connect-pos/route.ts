@@ -4,7 +4,7 @@ import Restaurant from '@/models/Restaurant';
 import SyncJob from '@/models/SyncJob';
 import { ToastIntegration } from '@/services/ToastIntegration';
 import { verifyAuth, unauthorizedResponse } from '@/middleware/auth';
-import { enqueueSyncJob } from '@/lib/queue';
+import { enqueueSyncJob } from '@/lib/mongoQueue';
 
 /**
  * POST /api/restaurants/[id]/connect-pos
@@ -135,7 +135,6 @@ export async function POST(
           const jobId = await enqueueSyncJob({
             restaurantId,
             posType: 'toast',
-            credentials,
             options: {
               startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // Last 30 days
               endDate: new Date(),
