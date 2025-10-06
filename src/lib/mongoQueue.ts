@@ -66,7 +66,7 @@ export async function getNextJob(): Promise<ISyncJob | null> {
   const job = await SyncJob.findOneAndUpdate(
     {
       status: 'pending',
-      attempts: { $lt: mongoose.model('SyncJob').schema.path('maxAttempts').default() }
+      attempts: { $lt: 3 }
     },
     {
       $set: {
