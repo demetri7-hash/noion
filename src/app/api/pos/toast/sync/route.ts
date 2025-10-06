@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
       console.log('🔄 Manual sync triggered: full sync (last 30 days)');
     }
 
-    // Enqueue background sync job
+    // Enqueue background sync job (this creates the SyncJob record)
     const jobId = await enqueueSyncJob({
       restaurantId: String(restaurant._id),
       posType: 'toast',
@@ -93,16 +93,6 @@ export async function POST(request: NextRequest) {
         fullSync
       },
       notificationEmail: restaurant.owner.email
-    });
-
-    // Create SyncJob record
-    await SyncJob.create({
-      restaurantId: restaurant._id,
-      posType: 'toast',
-      status: 'pending',
-      jobId,
-      notificationEmail: restaurant.owner.email,
-      maxAttempts: 3
     });
 
     console.log(`✅ Manual sync job enqueued: ${jobId}`);

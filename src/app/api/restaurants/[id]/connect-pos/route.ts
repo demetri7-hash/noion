@@ -131,7 +131,7 @@ export async function POST(
         try {
           const restaurantId = String(restaurant._id);
 
-          // Enqueue background job instead of running sync directly
+          // Enqueue background job (this creates the SyncJob record)
           const jobId = await enqueueSyncJob({
             restaurantId,
             posType: 'toast',
@@ -143,15 +143,8 @@ export async function POST(
             notificationEmail: restaurant.owner.email
           });
 
-          // Create SyncJob record in database
-          const syncJob = await SyncJob.create({
-            restaurantId: restaurant._id,
-            posType: 'toast',
-            status: 'pending',
-            jobId,
-            notificationEmail: restaurant.owner.email,
-            maxAttempts: 3
-          });
+          // Get the created SyncJob
+          const syncJob = await SyncJob.findOne({ jobId });
 
           // Update restaurant with POS type (but don't mark as connected yet)
           restaurant.posConfig.type = posType;

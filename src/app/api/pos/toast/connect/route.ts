@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
       console.log('First-time sync: last 30 days');
     }
 
-    // Enqueue background sync job
+    // Enqueue background sync job (this creates the SyncJob record)
     const jobId = await enqueueSyncJob({
       restaurantId: user.restaurantId,
       posType: 'toast',
@@ -127,15 +127,8 @@ export async function POST(request: NextRequest) {
       notificationEmail: user.email
     });
 
-    // Create SyncJob record
-    const syncJob = await SyncJob.create({
-      restaurantId: restaurant._id,
-      posType: 'toast',
-      status: 'pending',
-      jobId,
-      notificationEmail: user.email,
-      maxAttempts: 3
-    });
+    // Get the created SyncJob
+    const syncJob = await SyncJob.findOne({ jobId });
 
     // Update restaurant with encrypted credentials and POS config
     restaurant.posConfig = {
