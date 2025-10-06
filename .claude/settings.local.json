@@ -10,7 +10,9 @@
       "Bash(DATABASE_URL='mongodb+srv://demetri7_db_user:L9THnfRUfAWnmggK@noion-cluster.wsnmmhg.mongodb.net/noion' npx tsx scripts/test-predictions.ts 68e0bd8a603ef36c8257e021)",
       "Bash(DATABASE_URL='mongodb+srv://demetri7_db_user:L9THnfRUfAWnmggK@noion-cluster.wsnmmhg.mongodb.net/noion' TICKETMASTER_API_KEY='6CAbXYWtXxADpKR9dDDFCrIqdjUzT41Q' npx tsx scripts/test-enhanced-external-data.ts 68e0bd8a603ef36c8257e021)",
       "Bash(DATABASE_URL='mongodb+srv://demetri7_db_user:L9THnfRUfAWnmggK@noion-cluster.wsnmmhg.mongodb.net/noion' npx tsx scripts/run-smart-toast-sync.ts 68e0bd8a603ef36c8257e021)",
-      "Bash(DATABASE_URL='mongodb+srv://demetri7_db_user:L9THnfRUfAWnmggK@noion-cluster.wsnmmhg.mongodb.net/noion' ENCRYPTION_KEY='m3n4o5p6q7r8_production_encryption_key' npx tsx scripts/run-smart-toast-sync.ts 68e0bd8a603ef36c8257e021)"
+      "Bash(DATABASE_URL='mongodb+srv://demetri7_db_user:L9THnfRUfAWnmggK@noion-cluster.wsnmmhg.mongodb.net/noion' ENCRYPTION_KEY='m3n4o5p6q7r8_production_encryption_key' npx tsx scripts/run-smart-toast-sync.ts 68e0bd8a603ef36c8257e021)",
+      "Bash(curl:*)",
+      "Bash(echo \"Check browser console for auth token. Run this in browser DevTools console:\nlocalStorage.getItem(''authToken'') || localStorage.getItem(''token'')\")"
     ],
     "deny": [],
     "ask": []

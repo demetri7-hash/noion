@@ -63,12 +63,13 @@ export default function ToastSyncProgress({ restaurantId, onTriggerSync }: Props
     // Initial fetch
     fetchSyncStatus();
 
-    // Set up polling interval if syncing
-    if (syncProgress.status === 'syncing') {
-      const interval = setInterval(fetchSyncStatus, 5000); // Poll every 5 seconds
-      return () => clearInterval(interval);
-    }
-  }, [syncProgress.status, restaurantId]);
+    // Set up polling interval if syncing (check every 10 seconds instead of 5)
+    const interval = setInterval(() => {
+      fetchSyncStatus();
+    }, 10000); // Poll every 10 seconds
+
+    return () => clearInterval(interval);
+  }, [restaurantId]); // Only re-run if restaurantId changes
 
   // Format time remaining
   const formatTimeRemaining = (minutes: number): string => {

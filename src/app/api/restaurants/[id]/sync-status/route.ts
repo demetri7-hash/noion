@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import Restaurant from '@/models/Restaurant';
+import { getActiveJobs } from '@/lib/mongoQueue';
 
 /**
  * GET /api/restaurants/[id]/sync-status
@@ -15,7 +16,7 @@ export async function GET(
   try {
     await connectDB();
 
-    const restaurant = await Restaurant.findById(params.id).select('posConfig.syncProgress name');
+    const restaurant = await Restaurant.findById(params.id).select('name');
 
     if (!restaurant) {
       return NextResponse.json(
@@ -24,20 +25,49 @@ export async function GET(
       );
     }
 
-    // Return sync progress or default idle state
-    const syncProgress = restaurant.posConfig?.syncProgress || {
-      status: 'idle',
-      currentChunk: 0,
-      totalChunks: 0,
-      percentComplete: 0,
-      transactionsImported: 0,
-      estimatedTimeRemaining: 0,
-      message: 'No sync in progress',
-      startedAt: null,
-      lastUpdatedAt: null,
-      completedAt: null,
-      error: null
-    };
+    // Get active sync jobs from MongoDB queue
+    const activeJobs = await getActiveJobs(params.id);
+    const currentJob = activeJobs[0]; // Get most recent active job
+
+    // Build sync progress from job data
+    let syncProgress;
+    if (currentJob) {
+      const progress = currentJob.progress || {};
+      const percentComplete = progress.totalPages
+        ? ((progress.currentPage || 0) / progress.totalPages) * 100
+        : 0;
+
+      syncProgress = {
+        status: currentJob.status === 'processing' ? 'syncing' : 'pending',
+        currentChunk: progress.currentPage || 0,
+        totalChunks: progress.totalPages || 0,
+        percentComplete,
+        transactionsImported: progress.ordersProcessed || 0,
+        estimatedTimeRemaining: progress.estimatedTotal
+          ? Math.ceil(((progress.estimatedTotal - progress.ordersProcessed) / 100) * 2)
+          : 0,
+        message: `Syncing page ${progress.currentPage || 0}/${progress.totalPages || 0}...`,
+        startedAt: currentJob.startedAt,
+        lastUpdatedAt: currentJob.updatedAt,
+        completedAt: null,
+        error: currentJob.error?.message || null
+      };
+    } else {
+      // No active job - return idle state
+      syncProgress = {
+        status: 'idle',
+        currentChunk: 0,
+        totalChunks: 0,
+        percentComplete: 0,
+        transactionsImported: 0,
+        estimatedTimeRemaining: 0,
+        message: 'No sync in progress',
+        startedAt: null,
+        lastUpdatedAt: null,
+        completedAt: null,
+        error: null
+      };
+    }
 
     return NextResponse.json({
       restaurantId: params.id,
@@ -57,7 +87,7 @@ export async function GET(
 /**
  * POST /api/restaurants/[id]/sync-status
  *
- * Manually trigger a Toast historical sync (optional future feature)
+ * Manually trigger a Toast sync
  */
 export async function POST(
   request: NextRequest,
@@ -76,21 +106,28 @@ export async function POST(
     }
 
     // Check if sync already in progress
-    if (restaurant.posConfig?.syncProgress?.status === 'syncing') {
+    const activeJobs = await getActiveJobs(params.id);
+    if (activeJobs.length > 0) {
       return NextResponse.json(
         {
           error: 'Sync already in progress',
-          syncProgress: restaurant.posConfig.syncProgress
+          jobId: activeJobs[0].jobId
         },
         { status: 409 }
       );
     }
 
-    // TODO: Trigger background sync job
-    // For now, return a message that this feature is coming soon
+    // Enqueue new sync job
+    const { enqueueSyncJob } = await import('@/lib/mongoQueue');
+    const jobId = await enqueueSyncJob({
+      restaurantId: params.id,
+      posType: 'toast',
+      notificationEmail: restaurant.owner?.email
+    });
+
     return NextResponse.json({
-      message: 'Manual sync trigger coming soon. Please use the CLI script for now.',
-      script: `DATABASE_URL='...' ENCRYPTION_KEY='...' npx tsx scripts/run-smart-toast-sync.ts ${params.id}`
+      message: 'Sync job queued successfully',
+      jobId
     });
 
   } catch (error: any) {

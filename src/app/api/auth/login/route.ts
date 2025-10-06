@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import { AuthService } from '@/services/AuthService';
 import { decryptToastCredentials } from '@/utils/toastEncryption';
-import { enqueueSyncJob } from '@/lib/queue';
-import SyncJob from '@/models/SyncJob';
+import { enqueueSyncJob } from '@/lib/mongoQueue';
 import { POSSystemType } from '@/models/Restaurant';
 
 /**
@@ -139,31 +138,11 @@ async function handleAutoSync(user: any): Promise<void> {
       console.log('   First-time sync: last 30 days');
     }
 
-    // Enqueue background sync job
+    // Enqueue background sync job (MongoDB-based queue)
     const jobId = await enqueueSyncJob({
       restaurantId: String(user._id),
       posType: 'toast',
-      credentials: {
-        clientId: credentials.clientId,
-        clientSecret: credentials.clientSecret,
-        locationGuid: credentials.locationGuid
-      },
-      options: {
-        startDate,
-        endDate: now,
-        fullSync
-      },
       notificationEmail: user.owner.email
-    });
-
-    // Create SyncJob record
-    await SyncJob.create({
-      restaurantId: user._id,
-      posType: 'toast',
-      status: 'pending',
-      jobId,
-      notificationEmail: user.owner.email,
-      maxAttempts: 3
     });
 
     console.log(`✅ Auto-sync job enqueued: ${jobId}`);
