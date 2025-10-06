@@ -1,4 +1,4 @@
-import { Schema, model, Document, Types } from 'mongoose';
+import mongoose, { Schema, Document, Types } from 'mongoose';
 
 /**
  * MenuItem Model
@@ -176,6 +176,6 @@ menuItemSchema.pre('save', function (next) {
   next();
 });
 
-const MenuItem = model<IMenuItem>('MenuItem', menuItemSchema);
-
-export default MenuItem;
+// Export the model (handle Next.js hot reload in dev mode)
+export default (mongoose.models.MenuItem as mongoose.Model<IMenuItem>) ||
+  mongoose.model<IMenuItem>('MenuItem', menuItemSchema);

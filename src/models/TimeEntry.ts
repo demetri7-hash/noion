@@ -1,4 +1,4 @@
-import { Schema, model, Document, Types } from 'mongoose';
+import mongoose, { Schema, Document, Types } from 'mongoose';
 
 /**
  * TimeEntry Model
@@ -153,6 +153,6 @@ timeEntrySchema.pre('save', function (next) {
   next();
 });
 
-const TimeEntry = model<ITimeEntry>('TimeEntry', timeEntrySchema);
-
-export default TimeEntry;
+// Export the model (handle Next.js hot reload in dev mode)
+export default (mongoose.models.TimeEntry as mongoose.Model<ITimeEntry>) ||
+  mongoose.model<ITimeEntry>('TimeEntry', timeEntrySchema);

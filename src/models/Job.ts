@@ -1,4 +1,4 @@
-import { Schema, model, Document, Types } from 'mongoose';
+import mongoose, { Schema, Document, Types } from 'mongoose';
 
 /**
  * Job Model
@@ -79,6 +79,6 @@ const jobSchema = new Schema<IJob>(
 jobSchema.index({ restaurantId: 1, isActive: 1 });
 jobSchema.index({ restaurantId: 1, title: 1 });
 
-const Job = model<IJob>('Job', jobSchema);
-
-export default Job;
+// Export the model (handle Next.js hot reload in dev mode)
+export default (mongoose.models.Job as mongoose.Model<IJob>) ||
+  mongoose.model<IJob>('Job', jobSchema);

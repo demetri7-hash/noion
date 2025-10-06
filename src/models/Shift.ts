@@ -1,4 +1,4 @@
-import { Schema, model, Document, Types } from 'mongoose';
+import mongoose, { Schema, Document, Types } from 'mongoose';
 
 /**
  * Shift Model
@@ -102,6 +102,6 @@ shiftSchema.index({ restaurantId: 1, businessDate: -1 });
 shiftSchema.index({ restaurantId: 1, employeeId: 1, businessDate: -1 });
 shiftSchema.index({ restaurantId: 1, scheduledStart: -1 });
 
-const Shift = model<IShift>('Shift', shiftSchema);
-
-export default Shift;
+// Export the model (handle Next.js hot reload in dev mode)
+export default (mongoose.models.Shift as mongoose.Model<IShift>) ||
+  mongoose.model<IShift>('Shift', shiftSchema);

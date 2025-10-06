@@ -1,4 +1,4 @@
-import { Schema, model, Document, Types } from 'mongoose';
+import mongoose, { Schema, Document, Types } from 'mongoose';
 
 /**
  * Menu Model
@@ -96,6 +96,6 @@ const menuSchema = new Schema<IMenu>(
 menuSchema.index({ restaurantId: 1, isActive: 1 });
 menuSchema.index({ restaurantId: 1, name: 1 });
 
-const Menu = model<IMenu>('Menu', menuSchema);
-
-export default Menu;
+// Export the model (handle Next.js hot reload in dev mode)
+export default (mongoose.models.Menu as mongoose.Model<IMenu>) ||
+  mongoose.model<IMenu>('Menu', menuSchema);
