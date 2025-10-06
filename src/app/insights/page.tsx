@@ -93,6 +93,39 @@ export default function InsightsPage() {
     }
   };
 
+  const runPatternDiscovery = async () => {
+    try {
+      const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+      if (!token) {
+        alert('Please log in first');
+        return;
+      }
+
+      const confirmed = confirm('Run pattern discovery on your transaction data? This will analyze the last 30 days and may take a few minutes.');
+      if (!confirmed) return;
+
+      setLoading(true);
+      const response = await fetch('/api/analytics/correlations/discover', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to run pattern discovery');
+      }
+
+      const data = await response.json();
+      alert(`✅ Pattern discovery complete! Found ${data.data.correlationsFound || 0} patterns.`);
+
+      // Refresh insights
+      await fetchInsights();
+    } catch (err) {
+      alert('Error: ' + (err instanceof Error ? err.message : 'Unknown error'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'critical': return 'bg-red-100 text-red-800 border-red-300';
@@ -140,10 +173,24 @@ export default function InsightsPage() {
       <div className="space-y-6">
         {/* Header */}
         <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg p-6">
-          <h1 className="text-3xl font-bold">AI Business Insights</h1>
-          <p className="text-purple-100 mt-2">
-            Pattern discovery and revenue optimization recommendations
-          </p>
+          <div className="flex justify-between items-start">
+            <div>
+              <h1 className="text-3xl font-bold">AI Business Insights</h1>
+              <p className="text-purple-100 mt-2">
+                Pattern discovery and revenue optimization recommendations
+              </p>
+            </div>
+            <button
+              onClick={runPatternDiscovery}
+              disabled={loading}
+              className="bg-white text-purple-600 px-6 py-3 rounded-lg font-semibold hover:bg-purple-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              Run Pattern Discovery
+            </button>
+          </div>
         </div>
 
         {/* Stats Overview */}

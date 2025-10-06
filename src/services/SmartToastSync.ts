@@ -84,45 +84,19 @@ export class SmartToastSync {
     const tokenData = await tokenResponse.json();
     const accessToken = tokenData.token?.accessToken || tokenData.access_token;
 
-    // Find the FIRST order using binary search approach
-    console.log('📅 Finding first order date (binary search)...');
+    // OPTIMIZATION: Only sync last 6 months (to save database space)
+    console.log('📅 Setting up 6-month sync window...');
 
-    // Toast API only has data from December 1, 2015
-    const toastMinDate = new Date('2015-12-01');
     const today = new Date();
+    const sixMonthsAgo = new Date(today);
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
-    let firstOrderDate = await this.binarySearchFirstOrder(
-      credentials.locationGuid,
-      accessToken,
-      toastMinDate,
-      today
-    );
-
-    if (!firstOrderDate) {
-      // FALLBACK: If binary search fails, try last 90 days
-      console.log('⚠️  Binary search found no orders. Trying fallback: last 90 days...');
-      const fallbackDate = new Date(today);
-      fallbackDate.setDate(fallbackDate.getDate() - 90);
-
-      const hasRecentOrders = await this.checkOrdersExist(
-        credentials.locationGuid,
-        accessToken,
-        fallbackDate,
-        today
-      );
-
-      if (hasRecentOrders) {
-        console.log(`✅ Found orders in last 90 days. Using ${fallbackDate.toLocaleDateString()} as start date.`);
-        firstOrderDate = fallbackDate;
-      } else {
-        throw new Error('No orders found in Toast (checked from Dec 2015 to today, and last 90 days)');
-      }
-    }
-
+    const firstOrderDate = sixMonthsAgo;
     const lastOrderDate = today;
 
-    console.log(`✅ First order: ${firstOrderDate.toLocaleDateString()}`);
-    console.log(`✅ Latest: ${lastOrderDate.toLocaleDateString()}`);
+    console.log(`✅ Syncing from: ${firstOrderDate.toLocaleDateString()}`);
+    console.log(`✅ Syncing to: ${lastOrderDate.toLocaleDateString()}`);
+    console.log(`📊 Period: Last 6 months only (optimized for database space)`);
 
     // Calculate chunks (30-day maximum per Toast API)
     const totalDays = Math.ceil((lastOrderDate.getTime() - firstOrderDate.getTime()) / (1000 * 60 * 60 * 24));
@@ -311,9 +285,14 @@ export class SmartToastSync {
   async executeInitialSync(
     restaurantId: string,
     estimate: SyncEstimate,
-    progressCallback?: (progress: SyncProgress) => void
+    progressCallback?: (progress: SyncProgress) => void,
+    startChunk: number = 0
   ): Promise<void> {
-    console.log(`\n🚀 Starting initial sync for restaurant ${restaurantId}...`);
+    if (startChunk > 0) {
+      console.log(`\n🔄 Resuming sync from chunk ${startChunk + 1}/${estimate.totalChunks}...`);
+    } else {
+      console.log(`\n🚀 Starting initial sync for restaurant ${restaurantId}...`);
+    }
 
     const restaurant = await Restaurant.findById(restaurantId);
     if (!restaurant) {
@@ -422,10 +401,15 @@ export class SmartToastSync {
     // Sync in reverse chronological order (newest first)
     // This gives immediate value to the user (recent data first)
     const chunkSize = 30;
-    let totalImported = 0;
+
+    // If resuming, get the total already imported from progress
+    const syncProgress = (restaurant.posConfig as any).syncProgress;
+    let totalImported = (startChunk > 0 && syncProgress?.transactionsImported) ? syncProgress.transactionsImported : 0;
     const startTime = Date.now();
 
-    for (let i = 0; i < estimate.totalChunks; i++) {
+    console.log(`📊 Starting from chunk ${startChunk + 1}, ${totalImported.toLocaleString()} transactions already imported\n`);
+
+    for (let i = startChunk; i < estimate.totalChunks; i++) {
       const chunkEndDate = new Date(estimate.lastOrderDate);
       chunkEndDate.setDate(chunkEndDate.getDate() - (i * chunkSize));
 
@@ -682,7 +666,7 @@ export class SmartToastSync {
   }
 
   /**
-   * Smart sync: Automatically chooses initial or incremental sync
+   * Smart sync: Automatically chooses initial, resume, or incremental sync
    */
   async smartSync(
     restaurantId: string,
@@ -695,8 +679,20 @@ export class SmartToastSync {
 
     // Check if initial sync has been completed
     const initialSyncComplete = (restaurant.posConfig as any).initialSyncComplete || false;
+    const syncProgress = (restaurant.posConfig as any).syncProgress;
 
-    if (!initialSyncComplete) {
+    // Check if we can resume an in-progress sync
+    if (!initialSyncComplete && syncProgress && syncProgress.status === 'syncing' && syncProgress.currentChunk > 0) {
+      console.log('🔄 Resuming incomplete sync...');
+      console.log(`   Last progress: Chunk ${syncProgress.currentChunk}/${syncProgress.totalChunks} (${syncProgress.percentComplete.toFixed(1)}%)`);
+      console.log(`   Transactions imported so far: ${syncProgress.transactionsImported?.toLocaleString() || 0}`);
+
+      // Re-estimate to get chunk dates, but use existing progress
+      const estimate = await this.estimateInitialSync(restaurantId);
+
+      // Resume from where we left off
+      await this.executeInitialSync(restaurantId, estimate, progressCallback, syncProgress.currentChunk);
+    } else if (!initialSyncComplete) {
       // First time sync - do full historical
       console.log('🆕 First sync detected - performing FULL historical sync...');
       const estimate = await this.estimateInitialSync(restaurantId);
