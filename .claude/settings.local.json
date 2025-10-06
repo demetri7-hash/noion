@@ -14,7 +14,9 @@
       "Bash(curl:*)",
       "Bash(echo \"Check browser console for auth token. Run this in browser DevTools console:\nlocalStorage.getItem(''authToken'') || localStorage.getItem(''token'')\")",
       "Bash(git add:*)",
-      "Bash(git commit -m \"$(cat <<''EOF''\nfix: Complete migration from Redis/BullMQ to MongoDB queue\n\nUpdates all API routes and scripts to use the new MongoDB-based queue system instead of Redis/BullMQ. This eliminates the Upstash Redis max requests limit error.\n\nChanges:\n- Replace @/lib/queue imports with @/lib/mongoQueue across all routes\n- Remove credentials parameter from enqueueSyncJob calls (not supported in new queue)\n- Update scripts/clear-and-resync.ts to use new queue interface\n- Fix TypeScript error in mongoQueue.ts getNextJob function\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
+      "Bash(git commit -m \"$(cat <<''EOF''\nfix: Complete migration from Redis/BullMQ to MongoDB queue\n\nUpdates all API routes and scripts to use the new MongoDB-based queue system instead of Redis/BullMQ. This eliminates the Upstash Redis max requests limit error.\n\nChanges:\n- Replace @/lib/queue imports with @/lib/mongoQueue across all routes\n- Remove credentials parameter from enqueueSyncJob calls (not supported in new queue)\n- Update scripts/clear-and-resync.ts to use new queue interface\n- Fix TypeScript error in mongoQueue.ts getNextJob function\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git push:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []

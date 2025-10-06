@@ -52,10 +52,7 @@ export async function GET(
       updatedAt: syncJob.updatedAt,
       startedAt: syncJob.startedAt,
       completedAt: syncJob.completedAt,
-      notificationSent: syncJob.notificationSent,
-      // Queue-specific data
-      queueState: queueStatus?.state || null,
-      queueProgress: queueStatus?.progress || null
+      notificationSent: syncJob.notificationSent
     };
 
     return NextResponse.json(response);
